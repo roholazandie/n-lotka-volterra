@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lotka-Volterra Dynamics</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+</head>
+<body>
+    <h1>N-Variable Lotka-Volterra Dynamics</h1>
+
+    <div class="controls">
+        <div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: center; justify-content: center; width: 100%;">
+            <div class="control-group">
+                <label for="numNodes">Nodes (n):</label>
+                <input type="number" id="numNodes" min="2" max="20" value="10">
+            </div>
+            <div class="control-group">
+                <label for="graphType" title="Choose network topology">Graph type:</label>
+                <select id="graphType" style="padding: 8px 12px; background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.15); color: #fff; border-radius: 8px; font-size: 14px; cursor: pointer; width: 180px;">
+                    <option value="random">Random (Erdős–Rényi)</option>
+                    <option value="barabasi">Scale-free (Barabási–Albert)</option>
+                </select>
+            </div>
+            <div class="control-group" id="connectionProbGroup">
+                <label for="connectionProb">Connection p:</label>
+                <input type="number" id="connectionProb" min="0.05" max="1" step="0.05" value="0.40">
+            </div>
+            <div class="control-group" id="barabasiParamGroup" style="display: none;">
+                <label for="barabasiM">Barabási m:</label>
+                <input type="number" id="barabasiM" min="1" max="5" value="2">
+            </div>
+            <div class="control-group">
+                <label for="interactionRange">Interaction range:</label>
+                <input type="number" id="interactionRange" min="0.1" max="3" step="0.1" value="1.0">
+            </div>
+            <div class="control-group">
+                <label for="extinctionThreshold">Extinction threshold:</label>
+                <input type="number" id="extinctionThreshold" min="0" max="1" step="0.01" value="0.05">
+            </div>
+        </div>
+
+        <div class="control-group">
+            <label>
+                <input type="checkbox" id="skewSymmetric" checked>
+                Skew-symmetric matrix (a<sub>ij</sub> = -a<sub>ji</sub>)
+            </label>
+        </div>
+
+        <div class="control-group">
+            <label for="speedSlider">Speed:</label>
+            <input type="range" id="speedSlider" min="0.1" max="5" step="0.1" value="1" style="width: 120px;">
+            <span id="speedValue" style="font-size: 12px; color: #888; min-width: 30px;">1.0x</span>
+        </div>
+
+        <div style="width: 100%; height: 1px; background: rgba(255, 255, 255, 0.1); margin: 15px 0;"></div>
+
+        <div class="tape-controls-inline">
+            <button id="playPauseBtn" class="tape-btn play-pause" title="Play/Pause">
+                <span class="icon-pause">⏸</span>
+            </button>
+            <button id="restartBtn" class="tape-btn restart" title="Restart">
+                <span class="icon-restart">⏹</span>
+            </button>
+            <button id="recordBtn" class="tape-btn record" title="Record (Coming soon)" disabled>
+                <span class="icon-record">⏺</span>
+            </button>
+        </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 20px; align-items: center; margin-bottom: 20px; width: 100%;">
+        <div style="display: flex; flex-direction: column; align-items: center; background: rgba(255, 255, 255, 0.03); padding: 20px; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.05); max-width: 840px;">
+            <h2 style="font-size: 18px; font-weight: 600; color: #b0b0b0; margin-bottom: 15px;">Dynamic Simulation</h2>
+            <svg id="graph" width="800" height="600"></svg>
+            <div style="margin-top: 10px; font-size: 12px; color: #888; text-align: center; max-width: 700px;">
+                Node size = x<sub>i</sub>, node color = red (positive) / blue (negative). Drag nodes to rearrange. Hover edges to see values.
+            </div>
+        </div>
+
+    <div style="display: flex; flex-direction: column; align-items: center; background: rgba(255, 255, 255, 0.03); padding: 20px; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.05); max-width: 840px; width: 840px;">
+            <button id="toggleStructure" class="structure-toggle">
+                <span id="structureArrow" style="transition: transform 0.3s ease;">▶</span>
+                <span>Graph Structure</span>
+            </button>
+            <div id="structurePanel" style="display: none; flex-direction: column; align-items: center; margin-top: 15px; width: 100%;">
+                <svg id="structureGraph" width="800" height="600"></svg>
+                <div style="margin-top: 10px; font-size: 12px; color: #888; text-align: center; max-width: 700px;">
+                    Pure mathematical representation: all nodes uniform size (yellow), all edges same color. Circular layout reveals closed paths and cycles in the interaction network.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="tooltip" id="tooltip"></div>
+
+    <div style="margin-top: 30px; width: 800px; background: rgba(255, 255, 255, 0.03); padding: 20px; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.05);">
+        <h2 style="font-size: 18px; font-weight: 600; color: #b0b0b0; margin-bottom: 15px; text-align: center;">Population Dynamics Over Time</h2>
+        <svg id="timePlot" width="800" height="300" style="display: block;"></svg>
+        <div class="stats" id="stats" style="margin-top: 15px; text-align: center;">Time: 0.00 | Max change: 0.000</div>
+        <div id="debugInfo" style="margin-top: 10px; font-size: 11px; color: #666; text-align: center; font-family: monospace;"></div>
+    </div>
+
+    <div style="margin-top: 30px; width: 800px; background: rgba(255, 255, 255, 0.03); padding: 20px; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.05);">
+        <h2 style="font-size: 18px; font-weight: 600; color: #b0b0b0; margin-bottom: 15px; text-align: center;">Eigenvalue Spectrum |λ<sub>i</sub>|</h2>
+        <svg id="eigenvaluePlot" width="800" height="300" style="display: block;"></svg>
+        <div style="margin-top: 10px; font-size: 12px; color: #888; text-align: center; max-width: 700px;">
+            Absolute values of eigenvalues (sorted largest to smallest). Indicates system stability and characteristic timescales.
+        </div>
+    </div>
+
+    <div style="margin-top: 30px; width: 800px; background: rgba(255, 255, 255, 0.03); padding: 20px; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.05);">
+        <h2 style="font-size: 18px; font-weight: 600; color: #b0b0b0; margin-bottom: 15px; text-align: center;">Complex Eigenvalue Plane</h2>
+        <svg id="complexPlot" width="800" height="500" style="display: block;"></svg>
+        <div style="margin-top: 10px; font-size: 12px; color: #888; text-align: center; max-width: 700px;">
+            Eigenvalues in the complex plane. Left half-plane (Re(λ) &lt; 0) indicates stability. Imaginary components reveal oscillatory dynamics.
+        </div>
+    </div>
+
+    <div style="margin-top: 30px; width: 800px; background: rgba(255, 255, 255, 0.03); padding: 20px; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.05); margin-bottom: 30px;">
+        <h2 style="font-size: 18px; font-weight: 600; color: #b0b0b0; margin-bottom: 15px; text-align: center;">Interaction Matrix (a<sub>ij</sub>)</h2>
+        <div style="display: flex; justify-content: center; align-items: flex-start; gap: 20px; flex-wrap: wrap;">
+            <div style="max-height: 500px; overflow: auto; padding: 10px;">
+                <div id="matrixContainer" style="display: inline-block;"></div>
+            </div>
+            <div style="background: rgba(255, 255, 255, 0.05); padding: 15px; border-radius: 8px; max-width: 200px;">
+                <div style="font-size: 12px; color: #888; line-height: 1.6;">
+                    <div style="margin-bottom: 10px; font-weight: 600; color: #b0b0b0;">Legend:</div>
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                        <div style="width: 20px; height: 20px; background: rgba(255, 80, 80, 0.3); border-radius: 4px; border: 1px solid rgba(255, 80, 80, 0.5);"></div>
+                        <span>Positive (cooperation)</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                        <div style="width: 20px; height: 20px; background: rgba(80, 120, 255, 0.3); border-radius: 4px; border: 1px solid rgba(80, 120, 255, 0.5);"></div>
+                        <span>Negative (competition)</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                        <div style="width: 20px; height: 20px; background: rgba(255, 255, 255, 0.05); border-radius: 4px; border: 1px solid rgba(255, 255, 255, 0.1);"></div>
+                        <span>Zero (no interaction)</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                        <div style="width: 20px; height: 20px; background: rgba(150, 150, 150, 0.1); border-radius: 4px; border: 2px dashed rgba(255, 255, 255, 0.2);"></div>
+                        <span>Diagonal (self-interaction)</span>
+                    </div>
+                    <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255, 255, 255, 0.1); font-size: 11px;">
+                        <strong>Editing:</strong><br>
+                        Click any cell to edit. Changes apply in real-time.<br><br>
+                        <strong>Skew-symmetric mode:</strong><br>
+                        Only the lower triangle and diagonal are editable. The upper triangle automatically shows -a<sub>ji</sub> (italic, dashed border).
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.11.0/math.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/numeric/1.2.6/numeric.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
