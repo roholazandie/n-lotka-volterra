@@ -846,6 +846,17 @@ function initialize() {
     n = parseInt(document.getElementById("numNodes").value);
     time = 0;
     const isSkewSymmetric = document.getElementById("skewSymmetric").checked;
+    const interactionRangeInput = parseFloat(document.getElementById("interactionRange").value);
+    const connectionProbInput = parseFloat(document.getElementById("connectionProb").value);
+    const interactionRange = Number.isFinite(interactionRangeInput) ? interactionRangeInput : 1;
+    const connectionProbability = Number.isFinite(connectionProbInput) ? connectionProbInput : 0.4;
+
+    const randomWeight = () => (Math.random() * 2 - 1) * interactionRange;
+    const randomNegativeDiagonal = () => {
+        const base = Math.max(interactionRange * 0.15, 0.05);
+        const spread = Math.max(interactionRange * 0.5, 0.1);
+        return -(Math.random() * spread + base);
+    };
 
     // Initialize state variables
     x = Array(n).fill(0).map(() => Math.random() * 0.5 + 0.1);
@@ -865,8 +876,8 @@ function initialize() {
         for (let i = 0; i < n; i++) {
             a[i][i] = 0;
             for (let j = i + 1; j < n; j++) {
-                if (Math.random() < 0.4) {
-                    const value = (Math.random() - 0.5) * 0.4;
+                if (Math.random() < connectionProbability) {
+                    const value = randomWeight();
                     a[i][j] = value;
                     a[j][i] = -value;
                 }
@@ -875,11 +886,11 @@ function initialize() {
     } else {
         for (let i = 0; i < n; i++) {
             for (let j = 0; j < n; j++) {
-                if (i !== j && Math.random() < 0.4) {
-                    a[i][j] = (Math.random() - 0.5) * 0.4;
+                if (i !== j && Math.random() < connectionProbability) {
+                    a[i][j] = randomWeight();
                 }
             }
-            a[i][i] = -Math.random() * 0.3 - 0.1;
+            a[i][i] = randomNegativeDiagonal();
         }
     }
 
@@ -1163,7 +1174,7 @@ function restart() {
 
     isPaused = false;
     const playPauseBtn = document.getElementById("playPauseBtn");
-    playPauseBtn.innerHTML = '<span class="icon-pause">⏸</span>';
+    playPauseBtn.innerHTML = '<span class="icon icon-pause"></span>';
     playPauseBtn.title = "Pause";
 
     draw();
@@ -1186,23 +1197,7 @@ function restart() {
 document.getElementById("restartBtn").addEventListener("click", restart);
 document.getElementById("numNodes").addEventListener("change", restart);
 document.getElementById("connectionProb").addEventListener("change", restart);
-document.getElementById("barabasiM").addEventListener("change", restart);
 document.getElementById("interactionRange").addEventListener("change", restart);
-document.getElementById("graphType").addEventListener("change", () => {
-    const graphType = document.getElementById("graphType").value;
-    const connectionProbGroup = document.getElementById("connectionProbGroup");
-    const barabasiParamGroup = document.getElementById("barabasiParamGroup");
-
-    if (graphType === "random") {
-        connectionProbGroup.style.display = "flex";
-        barabasiParamGroup.style.display = "none";
-    } else if (graphType === "barabasi") {
-        connectionProbGroup.style.display = "none";
-        barabasiParamGroup.style.display = "flex";
-    }
-
-    restart();
-});
 document.getElementById("skewSymmetric").addEventListener("change", () => {
     const isSkewSymmetric = document.getElementById("skewSymmetric").checked;
 
@@ -1224,10 +1219,10 @@ document.getElementById("playPauseBtn").addEventListener("click", () => {
     isPaused = !isPaused;
     const btn = document.getElementById("playPauseBtn");
     if (isPaused) {
-        btn.innerHTML = '<span class="icon-play">▶</span>';
+        btn.innerHTML = '<span class="icon icon-play"></span>';
         btn.title = "Play";
     } else {
-        btn.innerHTML = '<span class="icon-pause">⏸</span>';
+        btn.innerHTML = '<span class="icon icon-pause"></span>';
         btn.title = "Pause";
     }
 

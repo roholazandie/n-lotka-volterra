@@ -16,20 +16,9 @@
                 <label for="numNodes">Nodes (n):</label>
                 <input type="number" id="numNodes" min="2" max="20" value="10">
             </div>
-            <div class="control-group">
-                <label for="graphType" title="Choose network topology">Graph type:</label>
-                <select id="graphType" style="padding: 8px 12px; background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.15); color: #fff; border-radius: 8px; font-size: 14px; cursor: pointer; width: 180px;">
-                    <option value="random">Random (Erdős–Rényi)</option>
-                    <option value="barabasi">Scale-free (Barabási–Albert)</option>
-                </select>
-            </div>
             <div class="control-group" id="connectionProbGroup">
                 <label for="connectionProb">Connection p:</label>
                 <input type="number" id="connectionProb" min="0.05" max="1" step="0.05" value="0.40">
-            </div>
-            <div class="control-group" id="barabasiParamGroup" style="display: none;">
-                <label for="barabasiM">Barabási m:</label>
-                <input type="number" id="barabasiM" min="1" max="5" value="2">
             </div>
             <div class="control-group">
                 <label for="interactionRange">Interaction range:</label>
@@ -58,7 +47,7 @@
 
         <div class="tape-controls-inline">
             <button id="playPauseBtn" class="tape-btn play-pause" title="Play/Pause">
-                <span class="icon-pause">⏸</span>
+                <span class="icon icon-pause"></span>
             </button>
             <button id="restartBtn" class="tape-btn restart" title="Restart">
                 <span class="icon-restart">⏹</span>
@@ -70,7 +59,7 @@
     </div>
 
     <div style="display: flex; flex-direction: column; gap: 20px; align-items: center; margin-bottom: 20px; width: 100%;">
-        <div style="display: flex; flex-direction: column; align-items: center; background: rgba(255, 255, 255, 0.03); padding: 20px; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.05); max-width: 840px;">
+        <div class="panel-wide" style="display: flex; flex-direction: column; align-items: center; background: rgba(255, 255, 255, 0.03); padding: 20px; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.05);">
             <h2 style="font-size: 18px; font-weight: 600; color: #b0b0b0; margin-bottom: 15px;">Dynamic Simulation</h2>
             <svg id="graph" width="800" height="600"></svg>
             <div style="margin-top: 10px; font-size: 12px; color: #888; text-align: center; max-width: 700px;">
@@ -78,7 +67,7 @@
             </div>
         </div>
 
-    <div style="display: flex; flex-direction: column; align-items: center; background: rgba(255, 255, 255, 0.03); padding: 20px; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.05); max-width: 840px; width: 840px;">
+        <div class="panel-wide" style="display: flex; flex-direction: column; align-items: center; background: rgba(255, 255, 255, 0.03); padding: 20px; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.05);">
             <button id="toggleStructure" class="structure-toggle">
                 <span id="structureArrow" style="transition: transform 0.3s ease;">▶</span>
                 <span>Graph Structure</span>
@@ -94,14 +83,14 @@
 
     <div class="tooltip" id="tooltip"></div>
 
-    <div style="margin-top: 30px; width: 800px; background: rgba(255, 255, 255, 0.03); padding: 20px; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.05);">
+    <div class="panel-wide" style="margin-top: 30px; background: rgba(255, 255, 255, 0.03); padding: 20px; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.05);">
         <h2 style="font-size: 18px; font-weight: 600; color: #b0b0b0; margin-bottom: 15px; text-align: center;">Population Dynamics Over Time</h2>
         <svg id="timePlot" width="800" height="300" style="display: block;"></svg>
         <div class="stats" id="stats" style="margin-top: 15px; text-align: center;">Time: 0.00 | Max change: 0.000</div>
         <div id="debugInfo" style="margin-top: 10px; font-size: 11px; color: #666; text-align: center; font-family: monospace;"></div>
     </div>
 
-    <div style="margin-top: 30px; width: 800px; background: rgba(255, 255, 255, 0.03); padding: 20px; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.05);">
+    <div class="panel-wide" style="margin-top: 30px; background: rgba(255, 255, 255, 0.03); padding: 20px; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.05);">
         <h2 style="font-size: 18px; font-weight: 600; color: #b0b0b0; margin-bottom: 15px; text-align: center;">Eigenvalue Spectrum |λ<sub>i</sub>|</h2>
         <svg id="eigenvaluePlot" width="800" height="300" style="display: block;"></svg>
         <div style="margin-top: 10px; font-size: 12px; color: #888; text-align: center; max-width: 700px;">
@@ -109,7 +98,7 @@
         </div>
     </div>
 
-    <div style="margin-top: 30px; width: 800px; background: rgba(255, 255, 255, 0.03); padding: 20px; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.05);">
+    <div class="panel-wide" style="margin-top: 30px; background: rgba(255, 255, 255, 0.03); padding: 20px; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.05);">
         <h2 style="font-size: 18px; font-weight: 600; color: #b0b0b0; margin-bottom: 15px; text-align: center;">Complex Eigenvalue Plane</h2>
         <svg id="complexPlot" width="800" height="500" style="display: block;"></svg>
         <div style="margin-top: 10px; font-size: 12px; color: #888; text-align: center; max-width: 700px;">
@@ -117,7 +106,7 @@
         </div>
     </div>
 
-    <div style="margin-top: 30px; width: 800px; background: rgba(255, 255, 255, 0.03); padding: 20px; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.05); margin-bottom: 30px;">
+    <div class="panel-wide" style="margin-top: 30px; background: rgba(255, 255, 255, 0.03); padding: 20px; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.05); margin-bottom: 30px;">
         <h2 style="font-size: 18px; font-weight: 600; color: #b0b0b0; margin-bottom: 15px; text-align: center;">Interaction Matrix (a<sub>ij</sub>)</h2>
         <div style="display: flex; justify-content: center; align-items: flex-start; gap: 20px; flex-wrap: wrap;">
             <div style="max-height: 500px; overflow: auto; padding: 10px;">

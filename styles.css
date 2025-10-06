@@ -43,6 +43,18 @@ h1 {
     max-width: 1200px;
 }
 
+.panel-wide {
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.panel-wide svg {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+}
+
 .control-group {
     display: flex;
     align-items: center;
@@ -71,10 +83,6 @@ input[type="number"] {
 }
 
 #connectionProb {
-    width: 75px;
-}
-
-#barabasiM {
     width: 75px;
 }
 
@@ -252,6 +260,45 @@ button:active {
 .tape-btn:disabled .icon-record {
     filter: none;
     color: #666;
+}
+
+.tape-btn .icon {
+    position: relative;
+    display: inline-block;
+    width: 14px;
+    height: 16px;
+}
+
+.tape-btn .icon-play::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 2px;
+    transform: translateY(-50%);
+    width: 0;
+    height: 0;
+    border-top: 7px solid transparent;
+    border-bottom: 7px solid transparent;
+    border-left: 10px solid currentColor;
+}
+
+.tape-btn .icon-pause::before,
+.tape-btn .icon-pause::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    width: 4px;
+    height: 16px;
+    background: currentColor;
+    border-radius: 1px;
+}
+
+.tape-btn .icon-pause::before {
+    left: 2px;
+}
+
+.tape-btn .icon-pause::after {
+    right: 2px;
 }
 
 #graph {
