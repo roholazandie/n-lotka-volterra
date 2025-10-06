@@ -574,7 +574,8 @@ function drawStructureGraph() {
             if (i !== j && Math.abs(a[i][j]) > 0.001) {
                 structureLinks.push({
                     source: structureNodes[i],
-                    target: structureNodes[j]
+                    target: structureNodes[j],
+                    value: a[i][j]
                 });
             }
         }
@@ -582,14 +583,18 @@ function drawStructureGraph() {
 
     // Draw links
     const structureLink = structureLinkGroup.selectAll("path")
-        .data(structureLinks);
+        .data(structureLinks, d => `${d.source.id}-${d.target.id}`);
 
     structureLink.exit().remove();
 
-    structureLink.enter()
+    const structureLinkEnter = structureLink.enter()
         .append("path")
+        .attr("marker-end", "url(#arrow-structure)");
+
+    structureLinkEnter.append("title");
+
+    const structureLinkMerged = structureLinkEnter.merge(structureLink)
         .attr("marker-end", "url(#arrow-structure)")
-        .merge(structureLink)
         .attr("d", d => {
             // Calculate angle and adjust for node radius
             const dx = d.target.x - d.source.x;
@@ -625,7 +630,24 @@ function drawStructureGraph() {
                 // Straight line
                 return `M${startX},${startY}L${endX},${endY}`;
             }
+        })
+        .on("mouseover", (event, d) => {
+            tooltip.style("display", "block")
+                .html(`a<sub>${d.source.id + 1},${d.target.id + 1}</sub> = ${d.value.toFixed(3)}`)
+                .style("left", (event.pageX + 10) + "px")
+                .style("top", (event.pageY - 10) + "px");
+        })
+        .on("mousemove", (event) => {
+            tooltip
+                .style("left", (event.pageX + 10) + "px")
+                .style("top", (event.pageY - 10) + "px");
+        })
+        .on("mouseout", () => {
+            tooltip.style("display", "none");
         });
+
+    structureLinkMerged.select("title")
+        .text(d => `a_${d.source.id + 1},${d.target.id + 1} = ${d.value.toFixed(3)}`);
 
     // Draw nodes
     const structureNode = structureNodeGroup.selectAll("g")
@@ -645,6 +667,8 @@ function drawStructureGraph() {
         .attr("transform", d => `translate(${d.x},${d.y})`)
         .select("text")
         .text(d => d.id + 1);
+
+    updateCycleInfo();
 }
 
 function renderMatrix() {
@@ -775,6 +799,7 @@ let extinct = []; // Track which nodes are extinct
 let history = []; // Store time series data for each node
 let isPaused = false;
 let speedMultiplier = 1;
+let zeroCycleDiagonal = null;
 
 const g = svg.append("g");
 
@@ -842,10 +867,259 @@ function getColor(value) {
     }
 }
 
+function randomNormal(mean = 0, stdDev = 1) {
+    let u1 = 0;
+    let u2 = 0;
+    // Avoid zero to keep log defined
+    while (u1 === 0) u1 = Math.random();
+    while (u2 === 0) u2 = Math.random();
+    const mag = Math.sqrt(-2.0 * Math.log(u1));
+    return mean + stdDev * mag * Math.cos(2.0 * Math.PI * u2);
+}
+
+function randomPositiveDiagonal(n, options = {}) {
+    const low = options.low ?? -0.5;
+    const high = options.high ?? 0.5;
+    return Array.from({length: n}, () => {
+        const phi = Math.random() * (high - low) + low;
+        return Math.exp(phi);
+    });
+}
+
+function buildRingSkewMatrix(n, params = {}) {
+    const ringScale = params.ringScale ?? 1.0;
+    const extraDensity = params.extraDensity ?? 0.15;
+    const extraScale = params.extraScale ?? 0.2;
+
+    const skew = Array.from({length: n}, () => Array(n).fill(0));
+    const ringWeights = Array.from({length: n}, () => randomNormal(0, ringScale));
+
+    for (let i = 0; i < n; i++) {
+        const j = (i + 1) % n;
+        const w = ringWeights[i];
+        skew[i][j] = w;
+        skew[j][i] = -w;
+    }
+
+    for (let i = 0; i < n; i++) {
+        for (let j = i + 1; j < n; j++) {
+            if (Math.random() < extraDensity) {
+                const value = randomNormal(0, extraScale);
+                skew[i][j] += value;
+                skew[j][i] -= value;
+            }
+        }
+    }
+
+    for (let i = 0; i < n; i++) {
+        skew[i][i] = 0;
+    }
+
+    return skew;
+}
+
+function generateZeroCycleMatrix(n, density, scale, options = {}) {
+    const {zeroDiagonal = true} = options;
+    const clampedDensity = Math.min(Math.max(density ?? 0, 0), 1);
+    const effectiveScale = Math.max(scale ?? 0.01, 0.01);
+
+    const diag = randomPositiveDiagonal(n, {low: -0.5, high: 0.5});
+
+    const ringScale = Math.max(effectiveScale, 0.05);
+    const extraDensity = Math.min(Math.max(clampedDensity * 0.75, 0.12), 0.7);
+    const extraScale = effectiveScale * 0.45;
+
+    const skew = buildRingSkewMatrix(n, {ringScale, extraDensity, extraScale});
+    const matrix = Array.from({length: n}, () => Array(n).fill(0));
+
+    for (let i = 0; i < n; i++) {
+        const invDiag = 1 / diag[i];
+        for (let j = 0; j < n; j++) {
+            matrix[i][j] = skew[i][j] * invDiag;
+        }
+    }
+
+    if (zeroDiagonal) {
+        for (let i = 0; i < n; i++) {
+            matrix[i][i] = 0;
+        }
+    }
+
+    return {matrix, diag};
+}
+
+function computeZeroCycleResidual(matrix, diag) {
+    if (!matrix || !diag) {
+        return null;
+    }
+    const size = matrix.length;
+    if (diag.length !== size) {
+        return null;
+    }
+
+    let residualSum = 0;
+    let matrixNorm = 0;
+
+    for (let i = 0; i < size; i++) {
+        for (let j = 0; j < size; j++) {
+            const aij = matrix[i][j];
+            const residual = matrix[j][i] * diag[j] + diag[i] * aij;
+            residualSum += residual * residual;
+            matrixNorm += aij * aij;
+        }
+    }
+
+    const residualNorm = Math.sqrt(residualSum);
+    const froNormA = Math.sqrt(matrixNorm);
+    const relative = residualNorm / (1 + froNormA);
+
+    return {residualNorm, froNormA, relative};
+}
+
+function logZeroCycleResidual(matrix, diag) {
+    const stats = computeZeroCycleResidual(matrix, diag);
+    if (!stats) {
+        console.log("[Zero Cycle] Residual check skipped: missing matrix/diag.");
+        return;
+    }
+    console.log("[Zero Cycle] ||A^T D + D A||_F =", stats.residualNorm.toExponential(6),
+        "| ||A||_F =", stats.froNormA.toExponential(6),
+        "| relative residual =", stats.relative.toExponential(6));
+}
+
+function canonicalCycleKey(cycle) {
+    const len = cycle.length;
+    if (len === 0) return "";
+    const sequences = [];
+    const doubled = cycle.concat(cycle);
+    for (let i = 0; i < len; i++) {
+        sequences.push(doubled.slice(i, i + len).join("-"));
+    }
+    const reversed = cycle.slice().reverse();
+    const doubledRev = reversed.concat(reversed);
+    for (let i = 0; i < len; i++) {
+        sequences.push(doubledRev.slice(i, i + len).join("-"));
+    }
+    sequences.sort();
+    return sequences[0];
+}
+
+function sampleCyclesFromMatrix(matrix, options = {}) {
+    const size = matrix.length;
+    if (size === 0) return [];
+
+    const tol = options.tol ?? 1e-6;
+    const maxCycles = options.maxCycles ?? Math.min(8, Math.max(3, size * 2));
+    const maxLength = options.maxLength ?? Math.min(6, Math.max(3, size));
+    const attempts = options.attempts ?? 600;
+
+    const cycles = [];
+    const seen = new Set();
+
+    for (let attempt = 0; attempt < attempts && cycles.length < maxCycles; attempt++) {
+        const start = Math.floor(Math.random() * size);
+        const path = [start];
+        const used = new Set([start]);
+
+        for (let step = 0; step < maxLength - 1; step++) {
+            const current = path[path.length - 1];
+            const neighbors = [];
+            for (let j = 0; j < size; j++) {
+                if (!used.has(j) && Math.abs(matrix[current][j]) > tol) {
+                    neighbors.push(j);
+                }
+            }
+
+            if (neighbors.length === 0) {
+                break;
+            }
+
+            const next = neighbors[Math.floor(Math.random() * neighbors.length)];
+            path.push(next);
+            used.add(next);
+
+            if (path.length >= 2 && Math.abs(matrix[next][start]) > tol) {
+                const cycle = path.slice();
+                const key = canonicalCycleKey(cycle);
+                if (!seen.has(key)) {
+                    seen.add(key);
+                    cycles.push(cycle);
+                }
+                break;
+            }
+        }
+    }
+
+    return cycles;
+}
+
+function analyzeCycleParity(cycle, matrix) {
+    const length = cycle.length;
+    if (length === 0) {
+        return null;
+    }
+
+    let forward = 1;
+    let reverse = 1;
+    for (let idx = 0; idx < length; idx++) {
+        const i = cycle[idx];
+        const j = cycle[(idx + 1) % length];
+        forward *= matrix[i][j];
+        reverse *= matrix[j][i];
+    }
+
+    const sign = length % 2 === 0 ? 1 : -1;
+    const expected = sign * reverse;
+    const diff = Math.abs(forward - expected);
+    const relative = diff / Math.max(1, Math.abs(expected));
+
+    return {
+        nodes: cycle,
+        length,
+        forward,
+        reverse,
+        expected,
+        diff,
+        relative,
+        holds: relative < 1e-6
+    };
+}
+
+function updateCycleInfo() {
+    const container = document.getElementById("cycleInfo");
+    if (!container) {
+        return;
+    }
+
+    const cycles = sampleCyclesFromMatrix(a);
+    const analyses = cycles
+        .map(cycle => analyzeCycleParity(cycle, a))
+        .filter(Boolean)
+        .filter(analysis => analysis.length > 3);
+
+    if (analyses.length === 0) {
+        container.innerHTML = "<h3>Sample Cycle Parity</h3><p style=\"margin:0; color:#999;\">No directed cycles with length &gt; 3 detected.</p>";
+        return;
+    }
+
+    const listItems = analyses.map((analysis, idx) => {
+        const nodesLabel = analysis.nodes.map(node => node + 1).join(" → ") + " → " + (analysis.nodes[0] + 1);
+        const productsLabel = `Π<sub>forward</sub> = ${analysis.forward.toExponential(3)} | Π<sub>reverse</sub> = ${analysis.reverse.toExponential(3)} | (-1)<sup>${analysis.length}</sup>Π<sub>reverse</sub> = ${analysis.expected.toExponential(3)}`;
+        const statusClass = analysis.holds ? "cycle-status" : "cycle-status bad";
+        const statusText = analysis.holds ? `✔ parity holds (rel. error ${analysis.relative.toExponential(2)})` : `✖ parity off (rel. error ${analysis.relative.toExponential(2)})`;
+        return `<li><div class=\"cycle-header\">Cycle ${idx + 1} (length ${analysis.length}): ${nodesLabel}</div>
+            <div class=\"cycle-products\">${productsLabel}</div>
+            <div class=\"${statusClass}\">${statusText}</div></li>`;
+    }).join("");
+
+    container.innerHTML = `<h3>Sample Cycle Parity</h3><ul>${listItems}</ul>`;
+}
+
 function initialize() {
     n = parseInt(document.getElementById("numNodes").value);
     time = 0;
     const isSkewSymmetric = document.getElementById("skewSymmetric").checked;
+    const zeroCycle = document.getElementById("zeroCycle").checked;
     const interactionRangeInput = parseFloat(document.getElementById("interactionRange").value);
     const connectionProbInput = parseFloat(document.getElementById("connectionProb").value);
     const interactionRange = Number.isFinite(interactionRangeInput) ? interactionRangeInput : 1;
@@ -870,9 +1144,19 @@ function initialize() {
     }
 
     // Initialize interaction matrix
-    a = Array(n).fill(0).map(() => Array(n).fill(0));
-
-    if (isSkewSymmetric) {
+    if (zeroCycle) {
+        const {matrix, diag} = generateZeroCycleMatrix(
+            n,
+            connectionProbability,
+            interactionRange,
+            {zeroDiagonal: true}
+        );
+        a = matrix;
+        zeroCycleDiagonal = diag;
+        logZeroCycleResidual(a, zeroCycleDiagonal);
+    } else if (isSkewSymmetric) {
+        zeroCycleDiagonal = null;
+        a = Array(n).fill(0).map(() => Array(n).fill(0));
         for (let i = 0; i < n; i++) {
             a[i][i] = 0;
             for (let j = i + 1; j < n; j++) {
@@ -884,6 +1168,8 @@ function initialize() {
             }
         }
     } else {
+        zeroCycleDiagonal = null;
+        a = Array(n).fill(0).map(() => Array(n).fill(0));
         for (let i = 0; i < n; i++) {
             for (let j = 0; j < n; j++) {
                 if (i !== j && Math.random() < connectionProbability) {
@@ -1198,7 +1484,14 @@ document.getElementById("restartBtn").addEventListener("click", restart);
 document.getElementById("numNodes").addEventListener("change", restart);
 document.getElementById("connectionProb").addEventListener("change", restart);
 document.getElementById("interactionRange").addEventListener("change", restart);
+document.getElementById("zeroCycle").addEventListener("change", () => {
+    syncSkewAvailability();
+    restart();
+});
 document.getElementById("skewSymmetric").addEventListener("change", () => {
+    if (document.getElementById("zeroCycle").checked) {
+        return;
+    }
     const isSkewSymmetric = document.getElementById("skewSymmetric").checked;
 
     if (isSkewSymmetric) {
@@ -1252,5 +1545,18 @@ document.getElementById("toggleStructure").addEventListener("click", () => {
         button.classList.remove("active");
     }
 });
+
+function syncSkewAvailability() {
+    const zeroCycleCheckbox = document.getElementById("zeroCycle");
+    const skewCheckbox = document.getElementById("skewSymmetric");
+    if (zeroCycleCheckbox.checked) {
+        skewCheckbox.checked = false;
+        skewCheckbox.disabled = true;
+    } else {
+        skewCheckbox.disabled = false;
+    }
+}
+
+syncSkewAvailability();
 
 restart();

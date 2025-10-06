@@ -38,6 +38,13 @@
         </div>
 
         <div class="control-group">
+            <label>
+                <input type="checkbox" id="zeroCycle">
+                Zero Cycle graph (A<sup>T</sup>D + D A = 0)
+            </label>
+        </div>
+
+        <div class="control-group">
             <label for="speedSlider">Speed:</label>
             <input type="range" id="speedSlider" min="0.1" max="5" step="0.1" value="1" style="width: 120px;">
             <span id="speedValue" style="font-size: 12px; color: #888; min-width: 30px;">1.0x</span>
@@ -77,6 +84,7 @@
                 <div style="margin-top: 10px; font-size: 12px; color: #888; text-align: center; max-width: 700px;">
                     Pure mathematical representation: all nodes uniform size (yellow), all edges same color. Circular layout reveals closed paths and cycles in the interaction network.
                 </div>
+                <div id="cycleInfo" class="cycle-info" style="margin-top: 20px; max-width: 700px; width: 100%; text-align: left;"></div>
             </div>
         </div>
     </div>
