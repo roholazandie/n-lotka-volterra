@@ -10,13 +10,13 @@ class Config {
     
     // Canvas dimensions
     static CANVAS = {
-        width: 800,
+        width: 1000,
         height: 600
     };
 
     // Structure graph
     static STRUCTURE_GRAPH = {
-        width: 800,
+        width: 1000,
         height: 600,
         nodeRadius: 20,
         circleRadius: 220
@@ -24,7 +24,7 @@ class Config {
 
     // Time plot
     static TIME_PLOT = {
-        width: 800,
+        width: 1000,
         height: 300,
         margin: { top: 20, right: 30, bottom: 40, left: 50 }
     };
@@ -41,6 +41,13 @@ class Config {
         width: 400,
         height: 300,
         margin: { top: 20, right: 30, bottom: 40, left: 50 }
+    };
+
+    // Node visualization
+    static NODE = {
+        minRadius: 8,
+        maxRadius: 30,
+        defaultRadius: 15
     };
 
     // Animation settings
@@ -104,6 +111,22 @@ class Config {
 
     // Color schemes
     static COLORS = {
+        // Node colors
+        nodePositive: "#ff6b35",     // Orange for positive populations
+        nodeNegative: "#4ecdc4",     // Teal for negative populations  
+        nodeExtinct: "#666666",      // Gray for extinct populations
+        
+        // Link colors
+        linkPositive: "#ff6b35",     // Orange for positive interactions
+        linkNegative: "#4ecdc4",     // Teal for negative interactions
+        
+        // Structured link colors for cleaner categorization
+        links: {
+            positive: "#4CAF50",     // Green for positive interactions
+            negative: "#F44336",     // Red for negative interactions
+            neutral: "#9E9E9E"       // Gray for neutral/zero interactions
+        },
+        
         // Node colors (fall palette)
         nodeColors: [
             [255, 235, 140], // Light yellow
@@ -125,7 +148,8 @@ class Config {
         border: "rgba(255, 255, 255, 0.1)",
         axis: "rgba(255, 255, 255, 0.2)",
         text: "#888",
-        centerLine: "rgba(255, 255, 255, 0.4)"
+        centerLine: "rgba(255, 255, 255, 0.4)",
+        header: "#f5f5f5"            // Header background color
     };
 
     /**
@@ -199,6 +223,25 @@ class Config {
         const imagPart = Config.formatNumber(Math.abs(imag), decimals);
         const sign = imag >= 0 ? "+" : "-";
         return `${realPart} ${sign} ${imagPart}i`;
+    }
+
+    /**
+     * Get species color for time series plots
+     */
+    static getSpeciesColor(index) {
+        const colors = [
+            "#ff6b35", // Orange
+            "#4ecdc4", // Teal
+            "#45b7d1", // Blue
+            "#96ceb4", // Green
+            "#ffeaa7", // Yellow
+            "#dda0dd", // Plum
+            "#98d8c8", // Mint
+            "#f7dc6f", // Gold
+            "#bb8fce", // Purple
+            "#85c1e9"  // Light blue
+        ];
+        return colors[index % colors.length];
     }
 
     /**

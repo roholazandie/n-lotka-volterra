@@ -68,8 +68,8 @@
     <div style="display: flex; flex-direction: column; gap: 20px; align-items: center; margin-bottom: 20px; width: 100%;">
         <div class="panel-wide" style="display: flex; flex-direction: column; align-items: center; background: rgba(255, 255, 255, 0.03); padding: 20px; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.05);">
             <h2 style="font-size: 18px; font-weight: 600; color: #b0b0b0; margin-bottom: 15px;">Dynamic Simulation</h2>
-            <svg id="graph" width="800" height="600"></svg>
-            <div style="margin-top: 10px; font-size: 12px; color: #888; text-align: center; max-width: 700px;">
+            <svg id="graph" width="1000" height="600"></svg>
+            <div style="margin-top: 10px; font-size: 12px; color: #888; text-align: center; max-width: 900px;">
                 Node size = x<sub>i</sub>, node color = red (positive) / blue (negative). Drag nodes to rearrange. Hover edges to see values.
             </div>
         </div>
@@ -80,7 +80,7 @@
                 <span>Graph Structure</span>
             </button>
             <div id="structurePanel" style="display: none; flex-direction: column; align-items: center; margin-top: 15px; width: 100%;">
-                <svg id="structureGraph" width="800" height="600"></svg>
+                <svg id="structureGraph" width="1000" height="600"></svg>
                 <div style="margin-top: 10px; font-size: 12px; color: #888; text-align: center; max-width: 700px;">
                     Pure mathematical representation: all nodes uniform size (yellow), all edges same color. Circular layout reveals closed paths and cycles in the interaction network.
                 </div>
@@ -93,14 +93,14 @@
 
     <div class="panel-wide" style="margin-top: 30px; background: rgba(255, 255, 255, 0.03); padding: 20px; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.05);">
         <h2 style="font-size: 18px; font-weight: 600; color: #b0b0b0; margin-bottom: 15px; text-align: center;">Population Dynamics Over Time</h2>
-        <svg id="timePlot" width="800" height="300" style="display: block;"></svg>
+        <svg id="timePlot" width="1000" height="300" style="display: block;"></svg>
         <div class="stats" id="stats" style="margin-top: 15px; text-align: center;">Time: 0.00 | Max change: 0.000</div>
         <div id="debugInfo" style="margin-top: 10px; font-size: 11px; color: #666; text-align: center; font-family: monospace;"></div>
     </div>
 
     <div class="panel-wide" style="margin-top: 30px; background: rgba(255, 255, 255, 0.03); padding: 20px; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.05);">
         <h2 style="font-size: 18px; font-weight: 600; color: #b0b0b0; margin-bottom: 15px; text-align: center;">Eigenvalue Spectrum |λ<sub>i</sub>|</h2>
-        <svg id="eigenvaluePlot" width="800" height="300" style="display: block;"></svg>
+        <svg id="eigenvaluePlot" width="1000" height="300" style="display: block;"></svg>
         <div style="margin-top: 10px; font-size: 12px; color: #888; text-align: center; max-width: 700px;">
             Absolute values of eigenvalues (sorted largest to smallest). Indicates system stability and characteristic timescales.
         </div>
@@ -108,7 +108,7 @@
 
     <div class="panel-wide" style="margin-top: 30px; background: rgba(255, 255, 255, 0.03); padding: 20px; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.05);">
         <h2 style="font-size: 18px; font-weight: 600; color: #b0b0b0; margin-bottom: 15px; text-align: center;">Complex Eigenvalue Plane</h2>
-        <svg id="complexPlot" width="800" height="500" style="display: block;"></svg>
+        <svg id="complexPlot" width="1000" height="500" style="display: block;"></svg>
         <div style="margin-top: 10px; font-size: 12px; color: #888; text-align: center; max-width: 700px;">
             Eigenvalues in the complex plane. Left half-plane (Re(λ) &lt; 0) indicates stability. Imaginary components reveal oscillatory dynamics.
         </div>
