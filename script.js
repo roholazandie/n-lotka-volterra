@@ -1,13 +1,114 @@
-const width = 800;
-const height = 600;
-const svg = d3.select("#graph");
-const tooltip = d3.select("#tooltip");
-const statsDiv = document.getElementById("stats");
+// Import refactored classes using dynamic imports to avoid potential circular dependency issues
+console.log('[DEBUG] Script started loading...');
 
-// Structure graph setup
-const structureWidth = 800;
-const structureHeight = 600;
-const structureSvg = d3.select("#structureGraph");
+console.log('[DEBUG] Starting dynamic module imports...');
+
+// Use dynamic imports to load modules
+Promise.all([
+    import('./src/core/Config.js'),
+    import('./src/core/EventBus.js'),
+    import('./src/core/AppState.js'),
+    import('./src/math/MatrixModel.js'),
+    import('./src/math/DynamicsEngine.js'),
+    import('./src/math/JacobianAndEigen.js'),
+    import('./src/math/CycleAnalyzer.js')
+]).then(([
+    ConfigModule,
+    EventBusModule, 
+    AppStateModule,
+    MatrixModelModule,
+    DynamicsEngineModule,
+    JacobianAndEigenModule,
+    CycleAnalyzerModule
+]) => {
+    console.log('[DEBUG] All modules imported successfully');
+    
+    // Extract classes from modules
+    const Config = ConfigModule.default;
+    const EventBus = EventBusModule.default;
+    const AppState = AppStateModule.default;
+    const MatrixModel = MatrixModelModule.default;
+    const DynamicsEngine = DynamicsEngineModule.default;
+    const JacobianAndEigen = JacobianAndEigenModule.default;
+    const CycleAnalyzer = CycleAnalyzerModule.default;
+    
+    console.log('[DEBUG] Classes extracted from modules');
+
+    // Initialize global application components
+    console.log('[DEBUG] Initializing components...');
+    const eventBus = new EventBus();
+    console.log('[DEBUG] EventBus created');
+    const appState = new AppState(eventBus);
+    console.log('[DEBUG] AppState created');
+    const matrixModel = new MatrixModel();
+    console.log('[DEBUG] MatrixModel created');
+    const dynamicsEngine = new DynamicsEngine();
+    console.log('[DEBUG] DynamicsEngine created');
+    const jacobianAndEigen = new JacobianAndEigen();
+    console.log('[DEBUG] JacobianAndEigen created');
+    const cycleAnalyzer = new CycleAnalyzer();
+    console.log('[DEBUG] CycleAnalyzer created');
+    console.log('[DEBUG] All components initialized successfully');
+
+    // Make components globally available
+    window.Config = Config;
+    window.eventBus = eventBus;
+    window.appState = appState;
+    window.matrixModel = matrixModel;
+    window.dynamicsEngine = dynamicsEngine;
+    window.jacobianAndEigen = jacobianAndEigen;
+    window.cycleAnalyzer = cycleAnalyzer;
+    
+    console.log('[DEBUG] Components made globally available');
+    
+    // Continue with the rest of the script initialization
+    initializeApplication();
+    
+}).catch(error => {
+    console.error('[ERROR] Failed to load modules:', error);
+    console.error('[ERROR] Stack:', error.stack);
+});
+
+// Move the rest of the application code into a function
+function initializeApplication() {
+    console.log('[DEBUG] Starting application initialization...');
+
+// Check if D3.js is available
+console.log('[DEBUG] Checking D3.js availability...');
+console.log('[DEBUG] typeof d3:', typeof d3);
+if (typeof d3 === 'undefined') {
+    console.error('[ERROR] D3.js is not loaded!');
+} else {
+    console.log('[DEBUG] D3.js version:', d3.version || 'version unknown');
+}
+
+    // Use Config constants instead of hardcoded values
+    console.log('[DEBUG] Initializing DOM elements...');
+    const width = window.Config.CANVAS.width;
+    const height = window.Config.CANVAS.height;
+    console.log('[DEBUG] Canvas dimensions:', width, 'x', height);
+    const svg = d3.select(window.Config.SELECTORS.graph);
+    console.log('[DEBUG] SVG element selected:', svg.empty() ? 'NOT FOUND' : 'FOUND');
+    const tooltip = d3.select(window.Config.SELECTORS.tooltip);
+    console.log('[DEBUG] Tooltip element selected:', tooltip.empty() ? 'NOT FOUND' : 'FOUND');
+    const statsDiv = document.getElementById("stats");
+    console.log('[DEBUG] Stats div found:', statsDiv ? 'YES' : 'NO');// Add error handler for unhandled errors
+window.addEventListener('error', (event) => {
+    console.error('[ERROR] Unhandled error:', event.error);
+    console.error('[ERROR] Stack:', event.error?.stack);
+});
+
+// Check document ready state
+console.log('[DEBUG] Document ready state:', document.readyState);
+
+// Main execution code wrapper
+try {
+    console.log('[DEBUG] Starting main execution...');
+
+// Structure graph setup using Config
+const structureWidth = Config.STRUCTURE_GRAPH.width;
+const structureHeight = Config.STRUCTURE_GRAPH.height;
+const structureSvg = d3.select(Config.SELECTORS.structureGraph);
 
 // Add background and styling to structure graph
 structureSvg.append("rect")
@@ -34,11 +135,11 @@ const structureG = structureSvg.append("g");
 const structureLinkGroup = structureG.append("g").attr("class", "structure-links");
 const structureNodeGroup = structureG.append("g").attr("class", "structure-nodes");
 
-// Time plot setup
-const timePlotSvg = d3.select("#timePlot");
-const timePlotWidth = 800;
-const timePlotHeight = 300;
-const timePlotMargin = {top: 20, right: 30, bottom: 40, left: 50};
+// Time plot setup using Config
+const timePlotSvg = d3.select(Config.SELECTORS.timePlot);
+const timePlotWidth = Config.TIME_PLOT.width;
+const timePlotHeight = Config.TIME_PLOT.height;
+const timePlotMargin = Config.TIME_PLOT.margin;
 const timePlotInnerWidth = timePlotWidth - timePlotMargin.left - timePlotMargin.right;
 const timePlotInnerHeight = timePlotHeight - timePlotMargin.top - timePlotMargin.bottom;
 
@@ -97,11 +198,11 @@ timePlotSvg.selectAll(".axis text")
 
 const linesGroup = timePlotG.append("g").attr("class", "lines");
 
-// Eigenvalue plot setup
-const eigenvaluePlotSvg = d3.select("#eigenvaluePlot");
-const eigenvaluePlotWidth = 800;
-const eigenvaluePlotHeight = 300;
-const eigenvaluePlotMargin = {top: 20, right: 30, bottom: 40, left: 50};
+// Eigenvalue plot setup using Config
+const eigenvaluePlotSvg = d3.select(Config.SELECTORS.eigenvaluePlot);
+const eigenvaluePlotWidth = Config.EIGEN_PLOT.width * 2; // Keep current layout
+const eigenvaluePlotHeight = Config.EIGEN_PLOT.height;
+const eigenvaluePlotMargin = Config.EIGEN_PLOT.margin;
 const eigenvaluePlotInnerWidth = eigenvaluePlotWidth - eigenvaluePlotMargin.left - eigenvaluePlotMargin.right;
 const eigenvaluePlotInnerHeight = eigenvaluePlotHeight - eigenvaluePlotMargin.top - eigenvaluePlotMargin.bottom;
 
@@ -165,11 +266,11 @@ eigenvaluePlotSvg.selectAll(".axis text")
 
 const barsGroup = eigenvaluePlotG.append("g").attr("class", "bars");
 
-// Complex plane plot setup
-const complexPlotSvg = d3.select("#complexPlot");
-const complexPlotWidth = 800;
-const complexPlotHeight = 500;
-const complexPlotMargin = {top: 30, right: 30, bottom: 50, left: 60};
+// Complex plane plot setup using Config
+const complexPlotSvg = d3.select(Config.SELECTORS.complexPlot);
+const complexPlotWidth = Config.COMPLEX_PLOT.width * 2; // Keep current layout
+const complexPlotHeight = Config.COMPLEX_PLOT.height + 200; // Keep current layout
+const complexPlotMargin = Config.COMPLEX_PLOT.margin;
 const complexPlotInnerWidth = complexPlotWidth - complexPlotMargin.left - complexPlotMargin.right;
 const complexPlotInnerHeight = complexPlotHeight - complexPlotMargin.top - complexPlotMargin.bottom;
 
@@ -258,92 +359,48 @@ complexPlotSvg.selectAll(".axis text")
 const eigenPointsGroup = complexPlotG.append("g").attr("class", "eigen-points");
 const eigenLinesGroup = complexPlotG.append("g").attr("class", "eigen-lines");
 
-// Fall color scale - yellows to oranges to deep reds
-function getFallColor(value, maxValue) {
-    const t = Math.min(value / (maxValue || 1), 1);
-    // Autumn palette: light yellow -> orange -> red -> deep red/brown
-    const colors = [
-        [255, 235, 140], // Light yellow
-        [255, 200, 80],  // Golden
-        [255, 150, 50],  // Orange
-        [255, 100, 50],  // Red-orange
-        [200, 50, 50],   // Deep red
-        [150, 40, 30]    // Brown-red
-    ];
-
-    const idx = t * (colors.length - 1);
-    const i = Math.floor(idx);
-    const f = idx - i;
-
-    if (i >= colors.length - 1) return `rgb(${colors[colors.length - 1].join(',')})`;
-
-    const c1 = colors[i];
-    const c2 = colors[i + 1];
-    const r = Math.floor(c1[0] + (c2[0] - c1[0]) * f);
-    const g = Math.floor(c1[1] + (c2[1] - c1[1]) * f);
-    const b = Math.floor(c1[2] + (c2[2] - c1[2]) * f);
-
-    return `rgb(${r},${g},${b})`;
-}
+// Use Config.getFallColor instead of local function
+// (Removed local getFallColor function - now using Config.getFallColor)
 
 function updateEigenvaluePlot() {
     try {
         // Check if matrix is valid
-        if (!a || a.length === 0) {
+        if (!window.appState.a || window.appState.a.length === 0) {
             console.warn("Matrix not initialized");
             return;
         }
 
         // Use Jacobian for oscillation mode, matrix A otherwise
-        const zeroCycle = document.getElementById("zeroCycle").checked;
+        const zeroCycle = document.getElementById(window.Config.SELECTORS.zeroCycle.substring(1)).checked;
         let matrixToAnalyze;
         
-        if (zeroCycle && x && epsilon) {
+        if (zeroCycle && window.appState.x && window.appState.epsilon) {
             // Use current Jacobian for oscillation analysis
-            matrixToAnalyze = currentJacobian(x, epsilon, a);
+            matrixToAnalyze = window.jacobianAndEigen.constructor.computeJacobian(window.appState.x, window.appState.epsilon, window.appState.a);
         } else {
             // Use matrix A for standard analysis
-            matrixToAnalyze = a;
+            matrixToAnalyze = window.appState.a;
         }
 
-        // Calculate eigenvalues using numeric.js (more robust)
-        const eigenResult = numeric.eig(matrixToAnalyze);
-
-        // Check if eigenResult is valid
-        if (!eigenResult || !eigenResult.lambda) {
-            console.warn("Eigenvalue computation returned invalid result");
+        // Get visualization data using refactored class
+        const eigenData = window.jacobianAndEigen.constructor.getVisualizationData(matrixToAnalyze, 'magnitude');
+        
+        if (!eigenData.isValid) {
+            console.warn("Eigenvalue computation failed:", eigenData.error);
             return;
         }
 
-        // Extract eigenvalues and compute absolute values
-        let eigenvalues = [];
-
-        if (eigenResult.lambda.x && eigenResult.lambda.y) {
-            // Complex eigenvalues
-            for (let i = 0; i < eigenResult.lambda.x.length; i++) {
-                const real = eigenResult.lambda.x[i] || 0;
-                const imag = eigenResult.lambda.y[i] || 0;
-                eigenvalues.push(Math.sqrt(real * real + imag * imag));
-            }
-        } else if (Array.isArray(eigenResult.lambda)) {
-            // All real eigenvalues
-            eigenvalues = eigenResult.lambda.map(ev => Math.abs(ev || 0));
-        } else {
-            console.warn("Unexpected eigenvalue format");
-            return;
-        }
-
-        // Sort in decreasing order
-        eigenvalues.sort((a, b) => b - a);
+        // Extract magnitudes for bar chart
+        const eigenvalues = eigenData.magnitudes;
 
         // Create data for bar chart
-        const eigenData = eigenvalues.map((value, i) => ({
+        const chartData = eigenvalues.map((value, i) => ({
             index: i + 1,
             value: value
         }));
 
         // Update scales
-        xScaleEigen.domain(eigenData.map(d => d.index));
+        xScaleEigen.domain(chartData.map(d => d.index));
         yScaleEigen.domain([0, Math.max(...eigenvalues) * 1.1 || 1]);
 
         // Update axes
@@ -352,7 +409,7 @@ function updateEigenvaluePlot() {
 
         // Draw bars
         const bars = barsGroup.selectAll(".eigen-bar")
-            .data(eigenData);
+            .data(chartData);
 
         bars.exit().remove();
 
@@ -361,7 +418,7 @@ function updateEigenvaluePlot() {
             .attr("class", "eigen-bar")
             .on("mouseover", function(event, d) {
                 tooltip.style("display", "block")
-                    .html(`λ${d.index}: ${d.value.toFixed(4)}`)
+                    .html(`λ${d.index}: ${Config.formatNumber(d.value)}`)
                     .style("left", (event.pageX + 10) + "px")
                     .style("top", (event.pageY - 10) + "px");
             })
@@ -375,14 +432,7 @@ function updateEigenvaluePlot() {
             .attr("y", d => yScaleEigen(d.value))
             .attr("width", xScaleEigen.bandwidth())
             .attr("height", d => eigenvaluePlotInnerHeight - yScaleEigen(d.value))
-            .attr("fill", (d, i) => {
-                // Gradient from bright purple to deep blue
-                const t = i / (eigenData.length - 1);
-                const r = Math.floor(102 + (70 - 102) * t);
-                const g = Math.floor(126 + (90 - 126) * t);
-                const b = Math.floor(234 + (180 - 234) * t);
-                return `rgb(${r}, ${g}, ${b})`;
-            })
+            .attr("fill", (d, i) => Config.getEigenBarColor(i, chartData.length))
             .attr("opacity", 0.8)
             .attr("rx", 4);
 
@@ -395,65 +445,31 @@ function updateEigenvaluePlot() {
 function updateComplexPlot() {
     try {
         // Use Jacobian for oscillation mode, matrix A otherwise
-        const zeroCycle = document.getElementById("zeroCycle").checked;
+        const zeroCycle = document.getElementById(window.Config.SELECTORS.zeroCycle.substring(1)).checked;
         let matrixToAnalyze;
         
-        if (zeroCycle && x && epsilon) {
+        if (zeroCycle && window.appState.x && window.appState.epsilon) {
             // Use current Jacobian for oscillation analysis
-            matrixToAnalyze = currentJacobian(x, epsilon, a);
+            matrixToAnalyze = window.jacobianAndEigen.constructor.computeJacobian(window.appState.x, window.appState.epsilon, window.appState.a);
         } else {
             // Use matrix A for standard analysis
-            matrixToAnalyze = a;
+            matrixToAnalyze = window.appState.a;
         }
 
-        // Calculate eigenvalues using numeric.js
-        const eigenResult = numeric.eig(matrixToAnalyze);
-
-        // Extract real and imaginary parts
-        const eigenData = [];
-
-        if (eigenResult.lambda && eigenResult.lambda.x) {
-            // Complex eigenvalues
-            for (let i = 0; i < eigenResult.lambda.x.length; i++) {
-                const real = eigenResult.lambda.x[i];
-                const imag = eigenResult.lambda.y[i];
-                eigenData.push({
-                    real: real,
-                    imag: imag,
-                    magnitude: Math.sqrt(real * real + imag * imag),
-                    index: i + 1
-                });
-            }
-        } else {
-            // All real eigenvalues
-            eigenResult.lambda.forEach((ev, i) => {
-                eigenData.push({
-                    real: ev,
-                    imag: 0,
-                    magnitude: Math.abs(ev),
-                    index: i + 1
-                });
-            });
+        // Get visualization data using refactored class
+        const eigenData = window.jacobianAndEigen.constructor.getVisualizationData(matrixToAnalyze, 'magnitude');
+        
+        if (!eigenData.isValid) {
+            console.warn("Eigenvalue computation failed:", eigenData.error);
+            return;
         }
 
-        // Calculate domain centered at origin with equal scale
-        const realValues = eigenData.map(d => d.real);
-        const imagValues = eigenData.map(d => d.imag);
-        const maxReal = Math.max(...realValues, 0.1);
-        const minReal = Math.min(...realValues, -0.1);
-        const maxImag = Math.max(...imagValues, 0.1);
-        const minImag = Math.min(...imagValues, -0.1);
-
-        // Make domain symmetric around 0 and equal scale for x and y
-        const maxAbsReal = Math.max(Math.abs(maxReal), Math.abs(minReal));
-        const maxAbsImag = Math.max(Math.abs(maxImag), Math.abs(minImag));
-
-        // Use the larger of the two to ensure equal scaling
-        const maxRange = Math.max(maxAbsReal, maxAbsImag) * 1.2;
+        // Use plotDomain from visualization data
+        const plotRange = eigenData.plotDomain.maxRange;
 
         // Update scales - centered at origin with equal scale
-        xScaleComplex.domain([-maxRange, maxRange]);
-        yScaleComplex.domain([-maxRange, maxRange]);
+        xScaleComplex.domain([-plotRange, plotRange]);
+        yScaleComplex.domain([-plotRange, plotRange]);
 
         // Update axes - position at center (0, 0)
         const zeroX = xScaleComplex(0);
@@ -466,7 +482,6 @@ function updateComplexPlot() {
         yAxisComplexG
             .attr("transform", `translate(${zeroX},0)`)
             .call(yAxisComplex);
-
 
         // Update zero lines (reinforcing the center axes)
         zeroLineVertical
@@ -483,7 +498,7 @@ function updateComplexPlot() {
 
         // Draw lines from origin to eigenvalues
         const lines = eigenLinesGroup.selectAll(".eigen-line")
-            .data(eigenData);
+            .data(eigenData.values);
 
         lines.exit().remove();
 
@@ -497,16 +512,12 @@ function updateComplexPlot() {
             .attr("y1", zeroY)
             .attr("x2", d => xScaleComplex(d.real))
             .attr("y2", d => yScaleComplex(d.imag))
-            .attr("stroke", d => {
-                // Match the color of the eigenvalue point
-                const angle = Math.atan2(d.imag, d.real);
-                const hue = (angle * 180 / Math.PI + 180) % 360;
-                return `hsla(${hue}, 70%, 60%, 0.3)`;
-            });
+            .attr("stroke", d => Config.getComplexColor(d.real, d.imag, 70, 60))
+            .attr("stroke-opacity", 0.3);
 
         // Draw eigenvalue points
         const points = eigenPointsGroup.selectAll(".eigen-point")
-            .data(eigenData);
+            .data(eigenData.values);
 
         points.exit()
             .transition()
@@ -527,28 +538,20 @@ function updateComplexPlot() {
                     .attr("r", 12)
                     .style("filter", "drop-shadow(0 0 15px currentColor)");
 
-                let eigenStr;
-                if (Math.abs(d.imag) < 0.0001) {
-                    // Pure real eigenvalue
-                    eigenStr = d.real.toFixed(4);
-                } else {
-                    // Complex eigenvalue
-                    const realPart = d.real.toFixed(4);
-                    const imagPart = Math.abs(d.imag).toFixed(4);
-                    const sign = d.imag >= 0 ? "+" : "-";
-                    eigenStr = `${realPart} ${sign} ${imagPart}i`;
-                }
+                const eigenStr = Config.formatComplex(d.real, d.imag);
+                const magnitude = Math.sqrt(d.real * d.real + d.imag * d.imag);
 
                 tooltip.style("display", "block")
-                    .html(`λ${d.index}: ${eigenStr}<br>|λ| = ${d.magnitude.toFixed(4)}`)
+                    .html(`λ${d.index}: ${eigenStr}<br>|λ| = ${Config.formatNumber(magnitude)}`)
                     .style("left", (event.pageX + 10) + "px")
                     .style("top", (event.pageY - 10) + "px");
             })
             .on("mouseout", function(event, d) {
+                const magnitude = Math.sqrt(d.real * d.real + d.imag * d.imag);
                 d3.select(this)
                     .transition()
                     .duration(150)
-                    .attr("r", d => Math.sqrt(d.magnitude) * 5 + 3);
+                    .attr("r", Math.sqrt(magnitude) * 5 + 3);
 
                 tooltip.style("display", "none");
             });
@@ -558,13 +561,11 @@ function updateComplexPlot() {
             .duration(500)
             .attr("cx", d => xScaleComplex(d.real))
             .attr("cy", d => yScaleComplex(d.imag))
-            .attr("r", d => Math.sqrt(d.magnitude) * 5 + 3)
-            .attr("fill", d => {
-                // Color based on position in complex plane
-                const angle = Math.atan2(d.imag, d.real);
-                const hue = (angle * 180 / Math.PI + 180) % 360;
-                return `hsl(${hue}, 70%, 60%)`;
+            .attr("r", d => {
+                const magnitude = Math.sqrt(d.real * d.real + d.imag * d.imag);
+                return Math.sqrt(magnitude) * 5 + 3;
             })
+            .attr("fill", d => Config.getComplexColor(d.real, d.imag))
             .attr("opacity", 0.8)
             .style("filter", "drop-shadow(0 0 8px currentColor)");
 
@@ -577,13 +578,13 @@ function updateComplexPlot() {
 function drawStructureGraph() {
     const centerX = structureWidth / 2;
     const centerY = structureHeight / 2;
-    const radius = 220;
-    const nodeRadius = 20;
+    const radius = Config.STRUCTURE_GRAPH.circleRadius;
+    const nodeRadius = Config.STRUCTURE_GRAPH.nodeRadius;
 
     // Position nodes in a circle
     const structureNodes = [];
-    for (let i = 0; i < n; i++) {
-        const angle = (i / n) * 2 * Math.PI - Math.PI / 2;
+    for (let i = 0; i < appState.n; i++) {
+        const angle = (i / appState.n) * 2 * Math.PI - Math.PI / 2;
         structureNodes.push({
             id: i,
             x: centerX + radius * Math.cos(angle),
@@ -591,19 +592,13 @@ function drawStructureGraph() {
         });
     }
 
-    // Create structure links based on adjacency matrix
-    const structureLinks = [];
-    for (let i = 0; i < n; i++) {
-        for (let j = 0; j < n; j++) {
-            if (i !== j && Math.abs(a[i][j]) > 0.001) {
-                structureLinks.push({
-                    source: structureNodes[i],
-                    target: structureNodes[j],
-                    value: a[i][j]
-                });
-            }
-        }
-    }
+    // Create structure links using MatrixModel
+    const structureLinks = window.matrixModel.constructor.renderableLinks(window.appState.a, window.Config.TOLERANCES.matrixElement)
+        .map(link => ({
+            source: structureNodes[link.source],
+            target: structureNodes[link.target],
+            value: link.value
+        }));
 
     // Draw links
     const structureLink = structureLinkGroup.selectAll("path")
@@ -697,21 +692,21 @@ function drawStructureGraph() {
 
 function renderMatrix() {
     const container = document.getElementById("matrixContainer");
-    const isSkewSymmetric = document.getElementById("skewSymmetric").checked;
+    const isSkewSymmetric = document.getElementById(Config.SELECTORS.skewSymmetric.substring(1)).checked;
 
     let html = '<table class="matrix-table"><thead><tr><th></th>';
 
     // Column headers
-    for (let j = 0; j < n; j++) {
+    for (let j = 0; j < appState.n; j++) {
         html += `<th>${j + 1}</th>`;
     }
     html += "</tr></thead><tbody>";
 
     // Matrix rows
-    for (let i = 0; i < n; i++) {
+    for (let i = 0; i < appState.n; i++) {
         html += `<tr><th>${i + 1}</th>`;
-        for (let j = 0; j < n; j++) {
-            const value = a[i][j];
+        for (let j = 0; j < appState.n; j++) {
+            const value = appState.a[i][j];
             let className = "matrix-cell";
             let readonly = "";
             let displayValue = value;
@@ -722,13 +717,13 @@ function renderMatrix() {
                 readonly = isSkewSymmetric ? "readonly" : "";
             } else if (isSkewSymmetric && i < j) {
                 // Upper triangle in skew-symmetric mode - show -a[j][i] and make readonly
-                displayValue = -a[j][i];
+                displayValue = -appState.a[j][i];
                 readonly = "readonly";
                 className += " upper-triangle";
             }
 
-            // Color based on display value
-            if (Math.abs(displayValue) < 0.001) {
+            // Color based on display value using Config tolerance
+            if (Math.abs(displayValue) < Config.TOLERANCES.matrixElement) {
                 className += " zero";
             } else if (displayValue > 0) {
                 className += " positive";
@@ -738,7 +733,7 @@ function renderMatrix() {
 
             html += `<td><input type="number" class="${className}" 
                      data-i="${i}" data-j="${j}" 
-                     value="${displayValue.toFixed(3)}" 
+                     value="${Config.formatNumber(displayValue)}" 
                      step="0.01" ${readonly}></td>`;
         }
         html += "</tr>";
@@ -754,11 +749,11 @@ function renderMatrix() {
             const j = parseInt(e.target.dataset.j);
             const value = parseFloat(e.target.value) || 0;
 
-            a[i][j] = value;
+            appState.a[i][j] = value;
 
             // If skew-symmetric and lower triangle, update the upper triangle
             if (isSkewSymmetric && i !== j) {
-                a[j][i] = -value;
+                appState.a[j][i] = -value;
             }
 
             // Update the links in the graph
@@ -766,6 +761,12 @@ function renderMatrix() {
 
             // Re-render matrix to update colors and paired values
             renderMatrix();
+
+            // Emit matrix update event
+            eventBus.emit(EventBus.Events.MATRIX_UPDATED, {
+                position: [i, j],
+                value: value
+            });
         });
 
         input.addEventListener("input", e => {
@@ -773,7 +774,7 @@ function renderMatrix() {
 
             // Update cell appearance based on value
             e.target.classList.remove("positive", "negative", "zero");
-            if (Math.abs(value) < 0.001) {
+            if (Math.abs(value) < Config.TOLERANCES.matrixElement) {
                 e.target.classList.add("zero");
             } else if (value > 0) {
                 e.target.classList.add("positive");
@@ -785,19 +786,8 @@ function renderMatrix() {
 }
 
 function updateLinks() {
-    // Recreate links based on current matrix values
-    links = [];
-    for (let i = 0; i < n; i++) {
-        for (let j = 0; j < n; j++) {
-            if (i !== j && Math.abs(a[i][j]) > 0.001) {
-                links.push({
-                    source: i,
-                    target: j,
-                    value: a[i][j]
-                });
-            }
-        }
-    }
+    // Recreate links using MatrixModel
+    appState.links = MatrixModel.renderableLinks(appState.a, Config.TOLERANCES.matrixElement);
 
     // Redraw the graph
     draw();
@@ -808,83 +798,72 @@ function updateLinks() {
     // Update eigenvalue plots
     updateEigenvaluePlot();
     updateComplexPlot();
+
+    // Emit event
+    eventBus.emit(EventBus.Events.MATRIX_UPDATED, {
+        linkCount: appState.links.length
+    });
 }
 
-let n = 10;
-let x = [];
-let epsilon = [];
-let a = [];
-let nodes = [];
-let links = [];
-let time = 0;
-let dt = 0.01;
-let animationId = null;
-let extinct = []; // Track which nodes are extinct
-let history = []; // Store time series data for each node
-let isPaused = false;
-let speedMultiplier = 1;
-let zeroCycleDiagonal = null;
+// Legacy variable compatibility - these reference appState properties
+// TODO: Gradually replace direct usage of these with appState references
+let n, x, epsilon, a, nodes, links, time, dt, animationId, extinct, history, isPaused, speedMultiplier, zeroCycleDiagonal;
 
-// Oscillation enforcement variables
+// Initialize legacy variables from appState
+function syncLegacyVariables() {
+    n = window.appState.n;
+    x = window.appState.x;
+    epsilon = window.appState.epsilon;
+    a = window.appState.a;
+    nodes = window.appState.nodes;
+    links = window.appState.links;
+    time = window.appState.time;
+    dt = window.appState.dt;
+    extinct = window.appState.extinct;
+    history = window.appState.history;
+    isPaused = window.appState.flags.isPaused;
+    speedMultiplier = window.appState.speedMultiplier;
+    zeroCycleDiagonal = window.appState.zeroCycleDiagonal;
+    animationId = window.appState.animation.animationId;
+}
+
+// Update appState from legacy variables (reverse sync)
+function updateAppStateFromLegacy() {
+    window.appState.n = n;
+    window.appState.x = x;
+    window.appState.epsilon = epsilon;
+    window.appState.a = a;
+    window.appState.nodes = nodes;
+    window.appState.links = links;
+    window.appState.time = time;
+    window.appState.dt = dt;
+    window.appState.extinct = extinct;
+    window.appState.history = history;
+    window.appState.flags.isPaused = isPaused;
+    window.appState.speedMultiplier = speedMultiplier;
+    window.appState.zeroCycleDiagonal = zeroCycleDiagonal;
+    window.appState.animation.animationId = animationId;
+}
+
+// Initialize with default values
+window.appState.setN(window.Config.SIMULATION.defaultNodes);
+window.appState.dt = window.Config.ANIMATION.defaultDt;
+window.appState.speedMultiplier = window.Config.ANIMATION.defaultSpeedMultiplier;
+window.appState.flags.isPaused = false; // Ensure isPaused starts as false
+syncLegacyVariables();
+
+// Oscillation enforcement variables - use DynamicsEngine methods
 let H0 = null; // Initial Hamiltonian value for monitoring
 
-// Helper functions for oscillation enforcement
-function makeSkewSymmetric(A) {
-  const n = A.length;
-  for (let i = 0; i < n; i++) {
-    A[i][i] = 0;
-    for (let j = i + 1; j < n; j++) {
-      const v = 0.5 * (A[i][j] - A[j][i]);  // skew part
-      A[i][j] = v;
-      A[j][i] = -v;
-    }
-  }
-  return A;
-}
+// Use refactored helper functions from classes - access static methods correctly
+const MatrixModelClass = window.matrixModel.constructor;
+const DynamicsEngineClass = window.dynamicsEngine.constructor;
+const JacobianAndEigenClass = window.jacobianAndEigen.constructor;
 
-function setOscillationEquilibrium(A, xStar = null) {
-  const n = A.length;
-  // choose a positive equilibrium
-  if (!xStar) xStar = Array.from({length: n}, () => Math.random() * 0.6 + 0.4); // (0.4,1.0)
-  // epsilon = -A x*
-  const eps = Array(n).fill(0);
-  for (let i = 0; i < n; i++) {
-    let s = 0;
-    for (let j = 0; j < n; j++) s += A[i][j] * xStar[j];
-    eps[i] = -s;
-  }
-  return {xStar, eps};
-}
-
-// Hamiltonian monitor (for skew A, the quadratic term ≈ 0)
-function hamiltonian(x, eps, A) {
-  let H = 0;
-  for (let i = 0; i < x.length; i++) H += eps[i] * Math.log(Math.max(x[i], 1e-12));
-  // keep quadratic term (should be ~0 if A is exactly skew)
-  let quad = 0;
-  for (let i = 0; i < x.length; i++) {
-    for (let j = 0; j < x.length; j++) quad += 0.5 * A[i][j] * x[i] * x[j];
-  }
-  return H + quad;
-}
-
-// Current Jacobian for eigenvalue analysis
-function currentJacobian(x, eps, A) {
-  const n = A.length;
-  // J = diag(x) * A + diag(eps + A x) * I
-  const Ax = Array(n).fill(0);
-  for (let i = 0; i < n; i++) {
-    let s = 0;
-    for (let j = 0; j < n; j++) s += A[i][j] * x[j];
-    Ax[i] = s;
-  }
-  const J = Array.from({length: n}, () => Array(n).fill(0));
-  for (let i = 0; i < n; i++) {
-    for (let j = 0; j < n; j++) J[i][j] = x[i] * A[i][j];
-    J[i][i] += (eps[i] + Ax[i]); // this term vanishes at equilibrium
-  }
-  return J;
-}
+const makeSkewSymmetric = MatrixModelClass.makeSkewSymmetric;
+const setOscillationEquilibrium = DynamicsEngineClass.setOscillationEquilibrium;
+const hamiltonian = DynamicsEngineClass.hamiltonian;
+const currentJacobian = JacobianAndEigenClass.computeJacobian;
 
 const g = svg.append("g");
 
@@ -941,12 +920,13 @@ function dragended(event, d) {
 }
 
 function getColor(value) {
+    // Use Config color scheme for consistency
     if (value < 0) {
         // Pure blue gradient for negative values
         const intensity = Math.min(Math.abs(value) * 150, 255);
         return `rgb(${Math.floor(intensity * 0.2)}, ${Math.floor(intensity * 0.5)}, 255)`;
     } else {
-        // Pure red gradient for positive values
+        // Pure red gradient for positive values  
         const intensity = Math.min(value * 150, 255);
         return `rgb(255, ${Math.floor(Math.max(0, 200 - intensity))}, ${Math.floor(Math.max(0, 150 - intensity))})`;
     }
@@ -1176,194 +1156,203 @@ function updateCycleInfo() {
         return;
     }
 
-    const cycles = sampleCyclesFromMatrix(a);
-    const analyses = cycles
-        .map(cycle => analyzeCycleParity(cycle, a))
-        .filter(Boolean)
-        .filter(analysis => analysis.length > 3);
+    try {
+        const cycles = window.cycleAnalyzer.constructor.sampleCyclesFromMatrix(window.appState.a);
+        const analyses = cycles
+            .map(cycle => window.cycleAnalyzer.constructor.analyzeCycleParity(cycle, window.appState.a))
+            .filter(Boolean)
+            .filter(analysis => analysis.length > 3);
 
-    if (analyses.length === 0) {
-        container.innerHTML = "<h3>Sample Cycle Parity</h3><p style=\"margin:0; color:#999;\">No directed cycles with length &gt; 3 detected.</p>";
-        return;
+        if (analyses.length === 0) {
+            container.innerHTML = "<h3>Sample Cycle Parity</h3><p style=\"margin:0; color:#999;\">No directed cycles with length &gt; 3 detected.</p>";
+            return;
+        }
+
+        const listItems = analyses.map((analysis, idx) => {
+            const nodesLabel = analysis.nodes.map(node => node + 1).join(" → ") + " → " + (analysis.nodes[0] + 1);
+            const productsLabel = `Π<sub>forward</sub> = ${analysis.forward.toExponential(3)} | Π<sub>reverse</sub> = ${analysis.reverse.toExponential(3)} | (-1)<sup>${analysis.length}</sup>Π<sub>reverse</sub> = ${analysis.expected.toExponential(3)}`;
+            const statusClass = analysis.holds ? "cycle-status" : "cycle-status bad";
+            const statusText = analysis.holds ? `✔ parity holds (rel. error ${analysis.relative.toExponential(2)})` : `✖ parity off (rel. error ${analysis.relative.toExponential(2)})`;
+            return `<li><div class=\"cycle-header\">Cycle ${idx + 1} (length ${analysis.length}): ${nodesLabel}</div>
+                <div class=\"cycle-products\">${productsLabel}</div>
+                <div class=\"${statusClass}\">${statusText}</div></li>`;
+        }).join("");
+
+        container.innerHTML = `<h3>Sample Cycle Parity</h3><ul>${listItems}</ul>`;
+        
+        // Emit event for other components
+        window.eventBus.emit('cycle-info-updated', { analyses });
+        
+    } catch (error) {
+        console.error('Cycle info update error:', error);
+        container.innerHTML = "<h3>Sample Cycle Parity</h3><p style=\"margin:0; color:#999;\">Error analyzing cycles.</p>";
     }
-
-    const listItems = analyses.map((analysis, idx) => {
-        const nodesLabel = analysis.nodes.map(node => node + 1).join(" → ") + " → " + (analysis.nodes[0] + 1);
-        const productsLabel = `Π<sub>forward</sub> = ${analysis.forward.toExponential(3)} | Π<sub>reverse</sub> = ${analysis.reverse.toExponential(3)} | (-1)<sup>${analysis.length}</sup>Π<sub>reverse</sub> = ${analysis.expected.toExponential(3)}`;
-        const statusClass = analysis.holds ? "cycle-status" : "cycle-status bad";
-        const statusText = analysis.holds ? `✔ parity holds (rel. error ${analysis.relative.toExponential(2)})` : `✖ parity off (rel. error ${analysis.relative.toExponential(2)})`;
-        return `<li><div class=\"cycle-header\">Cycle ${idx + 1} (length ${analysis.length}): ${nodesLabel}</div>
-            <div class=\"cycle-products\">${productsLabel}</div>
-            <div class=\"${statusClass}\">${statusText}</div></li>`;
-    }).join("");
-
-    container.innerHTML = `<h3>Sample Cycle Parity</h3><ul>${listItems}</ul>`;
 }
 
 function initialize() {
-    n = parseInt(document.getElementById("numNodes").value);
-    time = 0;
+    console.log('[DEBUG] Initialize function called');
+    const inputN = parseInt(document.getElementById("numNodes").value);
     const isSkewSymmetric = document.getElementById("skewSymmetric").checked;
     const zeroCycle = document.getElementById("zeroCycle").checked;
+    console.log('[DEBUG] Settings:', { inputN, isSkewSymmetric, zeroCycle });
+    
     const interactionRangeInput = parseFloat(document.getElementById("interactionRange").value);
     const connectionProbInput = parseFloat(document.getElementById("connectionProb").value);
     const interactionRange = Number.isFinite(interactionRangeInput) ? interactionRangeInput : 1;
     const connectionProbability = Number.isFinite(connectionProbInput) ? connectionProbInput : 0.4;
 
-    // Reset Hamiltonian monitor
-    H0 = null;
-
-    const randomWeight = () => (Math.random() * 2 - 1) * interactionRange;
-    const randomNegativeDiagonal = () => {
-        const base = Math.max(interactionRange * 0.15, 0.05);
-        const spread = Math.max(interactionRange * 0.5, 0.1);
-        return -(Math.random() * spread + base);
-    };
-
-    // Initialize interaction matrix based on mode
+    // Reset global time
+    time = 0;
+    
+    // Update AppState with new settings
+    appState.setN(inputN);
+    appState.interactionRange = interactionRange;
+    appState.connectionProbability = connectionProbability;
+    appState.isSkewSymmetric = isSkewSymmetric;
+    appState.zeroCycle = zeroCycle;
+    
+    // Generate matrix based on mode
+    let matrix, diag = null;
+    let initialX, initialEpsilon;
+    
     if (zeroCycle) {
         // Zero-cycle graph mode: enforce neutral oscillations
-        const {matrix, diag} = generateZeroCycleMatrix(
-            n,
+        const result = window.matrixModel.constructor.generateZeroCycleMatrix(
+            inputN,
             connectionProbability,
             interactionRange,
-            {zeroDiagonal: true}
+            { zeroDiagonal: true }
         );
-        a = matrix;
-        zeroCycleDiagonal = diag;
+        matrix = result.matrix;
+        diag = result.diag;
         
         // Force skew-symmetry for oscillation
-        makeSkewSymmetric(a);
+        window.matrixModel.constructor.makeSkewSymmetric(matrix);
         
         // Set equilibrium and linear terms for oscillation
-        const {xStar, eps} = setOscillationEquilibrium(a);
-        epsilon = eps;
-        
-        // Start near equilibrium with small perturbation
-        x = xStar.map(v => v * (1 + 0.05 * (Math.random() - 0.5)));
+        const equilibrium = window.dynamicsEngine.constructor.setOscillationEquilibrium(matrix);
+        initialX = equilibrium.xStar.map(v => v * (1 + 0.05 * (Math.random() - 0.5)));
+        initialEpsilon = equilibrium.eps;
         
         // Prevent extinction in oscillation mode
-        extinct = Array(n).fill(false);
         document.getElementById("extinctionThreshold").value = "0";
         
-        logZeroCycleResidual(a, zeroCycleDiagonal);
+        console.log("[Zero Cycle] Matrix generated with oscillation equilibrium");
     } else if (isSkewSymmetric) {
-        zeroCycleDiagonal = null;
-        a = Array(n).fill(0).map(() => Array(n).fill(0));
-        for (let i = 0; i < n; i++) {
-            a[i][i] = 0;
-            for (let j = i + 1; j < n; j++) {
-                if (Math.random() < connectionProbability) {
-                    const value = randomWeight();
-                    a[i][j] = value;
-                    a[j][i] = -value;
-                }
-            }
-        }
-        // Standard random initialization for non-oscillation skew-symmetric
-        x = Array(n).fill(0).map(() => Math.random() * 0.5 + 0.1);
-        epsilon = Array(n).fill(0).map(() => (Math.random() - 0.5) * 0.5);
-        extinct = Array(n).fill(false);
+        matrix = window.matrixModel.constructor.generateRandomMatrix(inputN, connectionProbability, interactionRange, { isSkewSymmetric: true });
+        initialX = Array(inputN).fill(0).map(() => Math.random() * 0.5 + 0.1);
+        initialEpsilon = Array(inputN).fill(0).map(() => (Math.random() - 0.5) * 0.5);
     } else {
-        zeroCycleDiagonal = null;
-        a = Array(n).fill(0).map(() => Array(n).fill(0));
-        for (let i = 0; i < n; i++) {
-            for (let j = 0; j < n; j++) {
-                if (i !== j && Math.random() < connectionProbability) {
-                    a[i][j] = randomWeight();
-                }
-            }
-            a[i][i] = randomNegativeDiagonal();
-        }
-        // Standard random initialization for general case
-        x = Array(n).fill(0).map(() => Math.random() * 0.5 + 0.1);
-        epsilon = Array(n).fill(0).map(() => (Math.random() - 0.5) * 0.5);
-        extinct = Array(n).fill(false);
+        matrix = window.matrixModel.constructor.generateRandomMatrix(inputN, connectionProbability, interactionRange);
+        initialX = Array(inputN).fill(0).map(() => Math.random() * 0.5 + 0.1);
+        initialEpsilon = Array(inputN).fill(0).map(() => (Math.random() - 0.5) * 0.5);
     }
-
+    
+    // Update AppState with generated values
+    window.appState.a = matrix;  // AppState uses 'a' for matrix
+    window.appState.x = initialX;
+    window.appState.epsilon = initialEpsilon;
+    window.appState.extinct = Array(inputN).fill(false);
+    window.appState.zeroCycleDiagonal = diag;
+    
+    console.log('[DEBUG] Initial values set - x:', initialX.slice(0, 3));
+    console.log('[DEBUG] Initial values set - epsilon:', initialEpsilon.slice(0, 3));
+    console.log('[DEBUG] Matrix size:', matrix.length, 'x', matrix[0]?.length);
+    
+    // Note: DynamicsEngine uses static methods, no initialization needed
+    
     // Initialize history for time plot
-    history = Array(n).fill(0).map(() => []);
-    for (let i = 0; i < n; i++) {
-        history[i].push({time: 0, value: x[i]});
+    history = Array(inputN).fill(0).map(() => []);
+    for (let i = 0; i < inputN; i++) {
+        history[i].push({time: 0, value: initialX[i]});
     }
 
-    // Create nodes
+    // Create nodes for visualization
     nodes = [];
-    for (let i = 0; i < n; i++) {
-        const angle = (i / n) * 2 * Math.PI - Math.PI / 2;
+    for (let i = 0; i < inputN; i++) {
+        const angle = (i / inputN) * 2 * Math.PI - Math.PI / 2;
         nodes.push({
             id: i,
-            x: width / 2 + 220 * Math.cos(angle),
-            y: height / 2 + 220 * Math.sin(angle)
+            x: window.Config.CANVAS.width / 2 + 220 * Math.cos(angle),
+            y: window.Config.CANVAS.height / 2 + 220 * Math.sin(angle)
         });
     }
 
-    // Create links
-    links = [];
-    for (let i = 0; i < n; i++) {
-        for (let j = 0; j < n; j++) {
-            if (i !== j && Math.abs(a[i][j]) > 0.001) {
-                links.push({
-                    source: i,
-                    target: j,
-                    value: a[i][j]
-                });
-            }
-        }
-    }
+    // Create links from matrix using MatrixModel
+    links = window.matrixModel.constructor.renderableLinks(matrix);
+    
+    // Update AppState with the created nodes and links
+    window.appState.nodes = nodes;
+    window.appState.links = links;
+    
+    // Sync legacy variables for compatibility (AFTER creating nodes/links)
+    syncLegacyVariables();
+    
+    // Emit initialization event
+    window.eventBus.emit('system-initialized', {
+        n: inputN,
+        matrix,
+        x: initialX,
+        epsilon: initialEpsilon,
+        zeroCycle,
+        isSkewSymmetric
+    });
 
     // Render the matrix editor
     renderMatrix();
 }
 
 function computeDerivatives() {
-    const dxdt = Array(n).fill(0);
-    for (let i = 0; i < n; i++) {
-        let sum = epsilon[i];
-        for (let k = 0; k < n; k++) {
-            sum += a[i][k] * x[k];
-        }
-        dxdt[i] = x[i] * sum;
-    }
-    return dxdt;
+    // Use DynamicsEngine static method for computation
+    return window.dynamicsEngine.constructor.computeDerivatives(window.appState.x, window.appState.epsilon, window.appState.a);
 }
 
 function step() {
+    console.log('[DEBUG] Step function called');
     const threshold = parseFloat(document.getElementById("extinctionThreshold").value);
-    const dxdt = computeDerivatives();
-    let maxChange = 0;
-
-    const effectiveDt = dt * speedMultiplier;
-
-    for (let i = 0; i < n; i++) {
-        if (!extinct[i]) {
-            x[i] += dxdt[i] * effectiveDt;
-            if (x[i] < 0.0001) x[i] = 0.0001;
-            if (x[i] > 1000) x[i] = 1000; // Prevent extreme explosion
-
-            // Check for extinction
-            if (x[i] < threshold) {
-                extinct[i] = true;
-                x[i] = 0; // Set to 0 for extinct species
-            }
-
-            maxChange = Math.max(maxChange, Math.abs(dxdt[i]));
+    console.log('[DEBUG] Extinction threshold:', threshold);
+    
+    const zeroCycleMode = document.getElementById("zeroCycle").checked;
+    console.log('[DEBUG] Zero cycle mode:', zeroCycleMode);
+    
+    // Create a state object that matches what DynamicsEngine expects
+    const stateForEngine = {
+        x: window.appState.x,
+        epsilon: window.appState.epsilon,
+        a: window.appState.a,  // Use 'a' for matrix
+        extinct: window.appState.extinct,
+        time: window.appState.time,
+        dt: window.appState.dt,
+        speedMultiplier: window.appState.speedMultiplier,
+        n: window.appState.n,
+        history: history,
+        ui: {
+            extinctionThreshold: threshold
         }
-    }
-
-    time += effectiveDt;
-
-    // Record history every 0.1 time units for performance
-    if (Math.floor(time * 10) > Math.floor((time - effectiveDt) * 10)) {
-        for (let i = 0; i < n; i++) {
-            history[i].push({time: time, value: x[i]});
-            // Keep last 500 points
-            if (history[i].length > 500) {
-                history[i].shift();
-            }
-        }
-    }
-
+    };
+    
+    // Use DynamicsEngine static method to perform the step
+    const maxChange = window.dynamicsEngine.constructor.step(stateForEngine);
+    
+    // Update AppState with new values from the modified state
+    window.appState.x = stateForEngine.x;
+    window.appState.time = stateForEngine.time;
+    window.appState.extinct = stateForEngine.extinct;
+    
+    // Update legacy variables for compatibility
+    syncLegacyVariables();
+    
+    // Update history for time plot (already updated by DynamicsEngine)
+    // No need to update history here as DynamicsEngine handles it
+    
+    // Emit step event
+    window.eventBus.emit('simulation-step', {
+        time: window.appState.time,
+        x: window.appState.x,
+        extinct: window.appState.extinct
+    });
+    
+    // Return max change for animation control
     return maxChange;
 }
 
@@ -1438,16 +1427,28 @@ function updateTimePlot() {
         .merge(lines)
         .attr("d", d => line(d.data))
         .attr("fill", "none")
-        .attr("stroke", d => d.extinct ? "rgba(100, 100, 100, 0.3)" : getFallColor(x[d.id], maxValue))
+        .attr("stroke", d => d.extinct ? "rgba(100, 100, 100, 0.3)" : window.Config.getFallColor(x[d.id], maxValue))
         .attr("stroke-width", d => d.extinct ? 1 : 2)
         .attr("opacity", d => d.extinct ? 0.3 : 0.8)
         .style("filter", d => d.extinct ? "none" : "drop-shadow(0 0 3px currentColor)");
 }
 
 function draw() {
+    console.log('[DEBUG] Draw function called');
+    console.log('[DEBUG] nodes array length:', nodes?.length);
+    console.log('[DEBUG] links array length:', links?.length);
+    console.log('[DEBUG] extinct array:', extinct?.slice(0, 5));
+    console.log('[DEBUG] window.appState.extinct:', window.appState.extinct?.slice(0, 5));
+    
     // Filter out extinct nodes and their links
-    const activeNodes = nodes.filter(d => !extinct[d.id]);
-    const activeLinks = links.filter(d => !extinct[d.source] && !extinct[d.target]);
+    console.log('[DEBUG] Before filtering - nodes:', nodes?.length, 'extinct array length:', window.appState.extinct?.length);
+    console.log('[DEBUG] First few nodes:', nodes?.slice(0, 3)?.map(n => ({id: n.id, extinct: window.appState.extinct[n.id]})));
+    console.log('[DEBUG] Current n value:', n, 'x array length:', x?.length);
+    
+    const activeNodes = nodes.filter(d => !window.appState.extinct[d.id]);
+    const activeLinks = links.filter(d => !window.appState.extinct[d.source] && !window.appState.extinct[d.target]);
+
+    console.log('[DEBUG] Draw - Active nodes:', activeNodes.length, 'Active links:', activeLinks.length);
 
     // Update simulation
     simulation.nodes(activeNodes);
@@ -1510,38 +1511,68 @@ function draw() {
 }
 
 function animate() {
+    console.log('[DEBUG] Animate function called, isPaused:', isPaused, 'appState.isPaused:', window.appState.flags.isPaused);
+    
+    // Force sync in case of state mismatch
+    if (isPaused !== window.appState.flags.isPaused) {
+        console.log('[DEBUG] State mismatch detected! Syncing isPaused from appState');
+        isPaused = window.appState.flags.isPaused;
+    }
+    
     if (!isPaused) {
+        console.log('[DEBUG] Animation not paused, calling step()');
         const maxChange = step();
+        console.log('[DEBUG] Step completed, maxChange:', maxChange);
+
+        // Check if we have access to global variables
+        if (typeof nodes === 'undefined') {
+            console.error('[ERROR] nodes is undefined in animate()');
+            return;
+        }
+        if (typeof links === 'undefined') {
+            console.error('[ERROR] links is undefined in animate()');
+            return;
+        }
 
         // Monitor Hamiltonian for oscillation mode
-        const zeroCycle = document.getElementById("zeroCycle").checked;
+        const zeroCycle = document.getElementById(window.Config.SELECTORS.zeroCycle.substring(1)).checked;
         let hamiltonianInfo = "";
         
-        if (zeroCycle && x && epsilon && a) {
-            const H = hamiltonian(x, epsilon, a);
+        if (zeroCycle && window.appState.x && window.appState.epsilon && window.appState.a) {
+            const H = window.dynamicsEngine.constructor.hamiltonian(window.appState.x, window.appState.epsilon, window.appState.a);
             if (H0 === null) H0 = H;
             const dH = H - H0;
             hamiltonianInfo = ` | H: ${H.toFixed(5)} (Δ ${dH.toExponential(2)})`;
         }
 
         // Filter out extinct nodes
-        const activeNodes = nodes.filter(d => !extinct[d.id]);
-        const activeLinks = links.filter(d => !extinct[d.source] && !extinct[d.target]);
+        console.log('[DEBUG] Total nodes:', nodes?.length || 0, 'Total links:', links?.length || 0);
+        console.log('[DEBUG] Extinct array length:', window.appState.extinct?.length || 0);
+        console.log('[DEBUG] Extinct array sample:', window.appState.extinct?.slice(0, 3), '...');
+        console.log('[DEBUG] First node extinct check:', window.appState.extinct?.[0]);
+        const activeNodes = nodes?.filter(d => !window.appState.extinct[d.id]) || [];
+        const activeLinks = links?.filter(d => !window.appState.extinct[d.source] && !window.appState.extinct[d.target]) || [];
+
+        console.log('[DEBUG] Active nodes:', activeNodes.length, 'Active links:', activeLinks.length);
+        console.log('[DEBUG] Current x values:', window.appState.x?.slice(0, 3), '...');
+        console.log('[DEBUG] nodeGroup defined:', typeof nodeGroup !== 'undefined');
+        console.log('[DEBUG] linkGroup defined:', typeof linkGroup !== 'undefined');
 
         // Update nodes data binding
         const node = nodeGroup.selectAll(".node")
             .data(activeNodes, d => d.id);
 
+        console.log('[DEBUG] Node selection size:', node.size(), 'Exit size:', node.exit().size());
         node.exit().remove();
 
         // Update node sizes and colors based on x values
         node.select("circle")
-            .attr("r", d => Math.sqrt(x[d.id]) * 30 + 5)
-            .attr("fill", d => getColor(x[d.id]));
+            .attr("r", d => Math.sqrt(window.appState.x[d.id]) * 30 + 5)
+            .attr("fill", d => getColor(window.appState.x[d.id]));
 
         node.select(".node-value")
-            .attr("y", d => Math.sqrt(x[d.id]) * 30 + 20)
-            .text(d => x[d.id].toFixed(3));
+            .attr("y", d => Math.sqrt(window.appState.x[d.id]) * 30 + 20)
+            .text(d => window.appState.x[d.id].toFixed(3));
 
         // Update links data binding
         const link = linkGroup.selectAll(".link")
@@ -1554,21 +1585,29 @@ function animate() {
         // Update time plot
         updateTimePlot();
 
-        statsDiv.textContent = `Time: ${time.toFixed(2)} | Max change: ${maxChange.toFixed(4)}${hamiltonianInfo}`;
+        statsDiv.textContent = `Time: ${window.appState.time.toFixed(2)} | Max change: ${maxChange.toFixed(4)}${hamiltonianInfo}`;
 
-        if (maxChange < 0.0001 || time >= 1000) {
+        console.log('[DEBUG] Stats updated:', statsDiv.textContent);
+
+        if (maxChange < 0.0001 || window.appState.time >= 1000) {
+            console.log('[DEBUG] Animation stopping - maxChange:', maxChange, 'time:', window.appState.time);
+            window.eventBus.emit('animation-stopped', { reason: 'convergence-or-timeout' });
             return; // Stop animation
         }
     }
 
+    console.log('[DEBUG] Requesting next animation frame');
     animationId = requestAnimationFrame(animate);
 }
 
 function restart() {
+    console.log('[DEBUG] Restart function called');
     if (animationId) {
         cancelAnimationFrame(animationId);
     }
     initialize();
+
+    console.log('[DEBUG] After initialize - nodes:', nodes?.length || 0, 'links:', links?.length || 0);
 
     // Fix initial positions
     nodes.forEach(node => {
@@ -1576,7 +1615,26 @@ function restart() {
         node.fy = node.y;
     });
 
+    // Force start the simulation
     isPaused = false;
+    window.appState.flags.isPaused = false; // Also update appState
+    console.log('[DEBUG] Setting isPaused to false, appState.flags.isPaused:', window.appState.flags.isPaused);
+    
+    // TEMPORARY FIX: Enable zero-cycle mode to fix the oscillation issue
+    const zeroCycleCheckbox = document.getElementById("zeroCycle");
+    const skewCheckbox = document.getElementById("skewSymmetric");
+    console.log('[DEBUG] Current checkbox states - zeroCycle:', zeroCycleCheckbox.checked, 'skew:', skewCheckbox.checked);
+    
+    if (!zeroCycleCheckbox.checked && skewCheckbox.checked) {
+        console.log('[DEBUG] Enabling zero-cycle mode to fix oscillations');
+        zeroCycleCheckbox.checked = true;
+        skewCheckbox.checked = false;
+        skewCheckbox.disabled = true;
+        // Re-initialize with new settings (call initialize directly to avoid infinite recursion)
+        console.log('[DEBUG] Re-initializing with zero-cycle mode...');
+        initialize();
+    }
+    
     const playPauseBtn = document.getElementById("playPauseBtn");
     playPauseBtn.innerHTML = '<span class="icon icon-pause"></span>';
     playPauseBtn.title = "Pause";
@@ -1586,6 +1644,13 @@ function restart() {
     drawStructureGraph();
     updateEigenvaluePlot();
     updateComplexPlot();
+    
+    // Force start animation if it's not running
+    console.log('[DEBUG] About to start animation, animationId:', animationId);
+    if (animationId === null) {
+        console.log('[DEBUG] Starting animation...');
+        animate();
+    }
 
     // Allow nodes to be draggable after initial layout
     setTimeout(() => {
@@ -1678,3 +1743,9 @@ function syncSkewAvailability() {
 syncSkewAvailability();
 
 restart();
+
+    } catch (error) {
+        console.error('[ERROR] Main execution failed:', error);
+        console.error('[ERROR] Stack trace:', error.stack);
+    }
+} // End of initializeApplication function
