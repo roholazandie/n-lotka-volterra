@@ -294,8 +294,20 @@ function updateEigenvaluePlot() {
             return;
         }
 
+        // Use Jacobian for oscillation mode, matrix A otherwise
+        const zeroCycle = document.getElementById("zeroCycle").checked;
+        let matrixToAnalyze;
+        
+        if (zeroCycle && x && epsilon) {
+            // Use current Jacobian for oscillation analysis
+            matrixToAnalyze = currentJacobian(x, epsilon, a);
+        } else {
+            // Use matrix A for standard analysis
+            matrixToAnalyze = a;
+        }
+
         // Calculate eigenvalues using numeric.js (more robust)
-        const eigenResult = numeric.eig(a);
+        const eigenResult = numeric.eig(matrixToAnalyze);
 
         // Check if eigenResult is valid
         if (!eigenResult || !eigenResult.lambda) {
@@ -382,8 +394,20 @@ function updateEigenvaluePlot() {
 
 function updateComplexPlot() {
     try {
+        // Use Jacobian for oscillation mode, matrix A otherwise
+        const zeroCycle = document.getElementById("zeroCycle").checked;
+        let matrixToAnalyze;
+        
+        if (zeroCycle && x && epsilon) {
+            // Use current Jacobian for oscillation analysis
+            matrixToAnalyze = currentJacobian(x, epsilon, a);
+        } else {
+            // Use matrix A for standard analysis
+            matrixToAnalyze = a;
+        }
+
         // Calculate eigenvalues using numeric.js
-        const eigenResult = numeric.eig(a);
+        const eigenResult = numeric.eig(matrixToAnalyze);
 
         // Extract real and imaginary parts
         const eigenData = [];
@@ -801,6 +825,67 @@ let isPaused = false;
 let speedMultiplier = 1;
 let zeroCycleDiagonal = null;
 
+// Oscillation enforcement variables
+let H0 = null; // Initial Hamiltonian value for monitoring
+
+// Helper functions for oscillation enforcement
+function makeSkewSymmetric(A) {
+  const n = A.length;
+  for (let i = 0; i < n; i++) {
+    A[i][i] = 0;
+    for (let j = i + 1; j < n; j++) {
+      const v = 0.5 * (A[i][j] - A[j][i]);  // skew part
+      A[i][j] = v;
+      A[j][i] = -v;
+    }
+  }
+  return A;
+}
+
+function setOscillationEquilibrium(A, xStar = null) {
+  const n = A.length;
+  // choose a positive equilibrium
+  if (!xStar) xStar = Array.from({length: n}, () => Math.random() * 0.6 + 0.4); // (0.4,1.0)
+  // epsilon = -A x*
+  const eps = Array(n).fill(0);
+  for (let i = 0; i < n; i++) {
+    let s = 0;
+    for (let j = 0; j < n; j++) s += A[i][j] * xStar[j];
+    eps[i] = -s;
+  }
+  return {xStar, eps};
+}
+
+// Hamiltonian monitor (for skew A, the quadratic term ≈ 0)
+function hamiltonian(x, eps, A) {
+  let H = 0;
+  for (let i = 0; i < x.length; i++) H += eps[i] * Math.log(Math.max(x[i], 1e-12));
+  // keep quadratic term (should be ~0 if A is exactly skew)
+  let quad = 0;
+  for (let i = 0; i < x.length; i++) {
+    for (let j = 0; j < x.length; j++) quad += 0.5 * A[i][j] * x[i] * x[j];
+  }
+  return H + quad;
+}
+
+// Current Jacobian for eigenvalue analysis
+function currentJacobian(x, eps, A) {
+  const n = A.length;
+  // J = diag(x) * A + diag(eps + A x) * I
+  const Ax = Array(n).fill(0);
+  for (let i = 0; i < n; i++) {
+    let s = 0;
+    for (let j = 0; j < n; j++) s += A[i][j] * x[j];
+    Ax[i] = s;
+  }
+  const J = Array.from({length: n}, () => Array(n).fill(0));
+  for (let i = 0; i < n; i++) {
+    for (let j = 0; j < n; j++) J[i][j] = x[i] * A[i][j];
+    J[i][i] += (eps[i] + Ax[i]); // this term vanishes at equilibrium
+  }
+  return J;
+}
+
 const g = svg.append("g");
 
 // Add subtle background pattern
@@ -1125,6 +1210,9 @@ function initialize() {
     const interactionRange = Number.isFinite(interactionRangeInput) ? interactionRangeInput : 1;
     const connectionProbability = Number.isFinite(connectionProbInput) ? connectionProbInput : 0.4;
 
+    // Reset Hamiltonian monitor
+    H0 = null;
+
     const randomWeight = () => (Math.random() * 2 - 1) * interactionRange;
     const randomNegativeDiagonal = () => {
         const base = Math.max(interactionRange * 0.15, 0.05);
@@ -1132,19 +1220,9 @@ function initialize() {
         return -(Math.random() * spread + base);
     };
 
-    // Initialize state variables
-    x = Array(n).fill(0).map(() => Math.random() * 0.5 + 0.1);
-    epsilon = Array(n).fill(0).map(() => (Math.random() - 0.5) * 0.5);
-    extinct = Array(n).fill(false); // No nodes extinct at start
-
-    // Initialize history for time plot
-    history = Array(n).fill(0).map(() => []);
-    for (let i = 0; i < n; i++) {
-        history[i].push({time: 0, value: x[i]});
-    }
-
-    // Initialize interaction matrix
+    // Initialize interaction matrix based on mode
     if (zeroCycle) {
+        // Zero-cycle graph mode: enforce neutral oscillations
         const {matrix, diag} = generateZeroCycleMatrix(
             n,
             connectionProbability,
@@ -1153,6 +1231,21 @@ function initialize() {
         );
         a = matrix;
         zeroCycleDiagonal = diag;
+        
+        // Force skew-symmetry for oscillation
+        makeSkewSymmetric(a);
+        
+        // Set equilibrium and linear terms for oscillation
+        const {xStar, eps} = setOscillationEquilibrium(a);
+        epsilon = eps;
+        
+        // Start near equilibrium with small perturbation
+        x = xStar.map(v => v * (1 + 0.05 * (Math.random() - 0.5)));
+        
+        // Prevent extinction in oscillation mode
+        extinct = Array(n).fill(false);
+        document.getElementById("extinctionThreshold").value = "0";
+        
         logZeroCycleResidual(a, zeroCycleDiagonal);
     } else if (isSkewSymmetric) {
         zeroCycleDiagonal = null;
@@ -1167,6 +1260,10 @@ function initialize() {
                 }
             }
         }
+        // Standard random initialization for non-oscillation skew-symmetric
+        x = Array(n).fill(0).map(() => Math.random() * 0.5 + 0.1);
+        epsilon = Array(n).fill(0).map(() => (Math.random() - 0.5) * 0.5);
+        extinct = Array(n).fill(false);
     } else {
         zeroCycleDiagonal = null;
         a = Array(n).fill(0).map(() => Array(n).fill(0));
@@ -1178,6 +1275,16 @@ function initialize() {
             }
             a[i][i] = randomNegativeDiagonal();
         }
+        // Standard random initialization for general case
+        x = Array(n).fill(0).map(() => Math.random() * 0.5 + 0.1);
+        epsilon = Array(n).fill(0).map(() => (Math.random() - 0.5) * 0.5);
+        extinct = Array(n).fill(false);
+    }
+
+    // Initialize history for time plot
+    history = Array(n).fill(0).map(() => []);
+    for (let i = 0; i < n; i++) {
+        history[i].push({time: 0, value: x[i]});
     }
 
     // Create nodes
@@ -1406,6 +1513,17 @@ function animate() {
     if (!isPaused) {
         const maxChange = step();
 
+        // Monitor Hamiltonian for oscillation mode
+        const zeroCycle = document.getElementById("zeroCycle").checked;
+        let hamiltonianInfo = "";
+        
+        if (zeroCycle && x && epsilon && a) {
+            const H = hamiltonian(x, epsilon, a);
+            if (H0 === null) H0 = H;
+            const dH = H - H0;
+            hamiltonianInfo = ` | H: ${H.toFixed(5)} (Δ ${dH.toExponential(2)})`;
+        }
+
         // Filter out extinct nodes
         const activeNodes = nodes.filter(d => !extinct[d.id]);
         const activeLinks = links.filter(d => !extinct[d.source] && !extinct[d.target]);
@@ -1436,7 +1554,7 @@ function animate() {
         // Update time plot
         updateTimePlot();
 
-        statsDiv.textContent = `Time: ${time.toFixed(2)} | Max change: ${maxChange.toFixed(4)}`;
+        statsDiv.textContent = `Time: ${time.toFixed(2)} | Max change: ${maxChange.toFixed(4)}${hamiltonianInfo}`;
 
         if (maxChange < 0.0001 || time >= 1000) {
             return; // Stop animation
